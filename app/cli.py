@@ -1,22 +1,13 @@
 import argparse
 import json
+import logging
 import sys
 
-from lxml import etree
-
 from app.builders.b2mml_builder import build_b2mml_xml
-from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
-from app.transformers.normalize import normalize_to_xslt_semantics
+from app.pipeline import InvalidXML, run_pipeline_from_file
 
-
-def run_pipeline(input_path: str):
-    """Shared pipeline for both XML and JSON output."""
-    with open(input_path, "rb") as f:
-        root = etree.parse(f).getroot()
-
-    model = transform_ampla_to_b2mml(root)
-    normalize_to_xslt_semantics(model, root)
-    return model
+logging.basicConfig(level=logging.ERROR, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 
 def model_to_json(model):
@@ -28,11 +19,7 @@ def model_to_json(model):
             "full_name": eq.full_name,
             "class_ids": eq.class_ids,
             "properties": [
-                {
-                    "name": p.name,
-                    "value": p.value,
-                    "datatype": p.datatype,
-                }
+                {"name": p.name, "value": p.value, "datatype": p.datatype}
                 for p in eq.properties
             ],
             "children": [eq_to_dict(c) for c in eq.children],
@@ -43,14 +30,9 @@ def model_to_json(model):
             "name": cls.name,
             "parent": cls.parent,
             "properties": [
-                {
-                    "name": p.name,
-                    "value": p.value,
-                    "datatype": p.datatype,
-                }
+                {"name": p.name, "value": p.value, "datatype": p.datatype}
                 for p in cls.properties
             ],
-            # Avoid circular references by dumping only names
             "inheritance_chain": [c.name for c in cls.inheritance_chain],
         }
 
@@ -62,33 +44,43 @@ def model_to_json(model):
 
 def main():
     parser = argparse.ArgumentParser(prog="b2mml")
+    parser.add_argument("--verbose", action="store_true", help="Enable debug logging")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    # convert → XML output
     convert = subparsers.add_parser("convert", help="Convert Ampla XML to B2MML XML")
     convert.add_argument("input", help="Input Ampla XML file")
     convert.add_argument("output", help="Output XML file")
 
-    # json → JSON output
     json_cmd = subparsers.add_parser("json", help="Convert Ampla XML to JSON model")
     json_cmd.add_argument("input", help="Input Ampla XML file")
     json_cmd.add_argument("output", nargs="?", help="Optional output JSON file")
 
     args = parser.parse_args()
 
-    # convert command
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
+        logger.debug("Verbose mode enabled")
+
+    try:
+        logger.debug(f"Loading and transforming XML from: {args.input}")
+        model = run_pipeline_from_file(args.input)
+    except InvalidXML as e:
+        logger.error(str(e))
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        sys.exit(1)
+
     if args.command == "convert":
-        model = run_pipeline(args.input)
+        logger.debug("Building B2MML XML output")
         xml = build_b2mml_xml(model)
         with open(args.output, "w", encoding="utf-8") as f:
             f.write(xml)
         return
 
-    # json command
     if args.command == "json":
-        model = run_pipeline(args.input)
+        logger.debug("Building JSON output")
         serializable = model_to_json(model)
-
         if args.output:
             with open(args.output, "w", encoding="utf-8") as f:
                 json.dump(serializable, f, indent=2)

@@ -15,6 +15,16 @@ The transformer is fully tested and suitable for automation, integration, and co
 
 ---
 
+## Origin
+
+This project is a modern re‑implementation of the original XSLT stylesheet published here:
+
+https://github.com/Ampla/Project-To-B2MML
+
+The Python version reproduces the transformation logic, adds normalization, and provides a complete API, CLI, and test suite.
+
+---
+
 ## Installation
 
 ### 1. Clone the repository
