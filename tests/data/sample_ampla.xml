@@ -1,0 +1,29 @@
+<Ampla>
+  <ClassDefinitions>
+    <ClassDefinition id="C1" name="Pump" type="Citect.Ampla.Isa95.EquipmentClassDefinition">
+      <PropertyDefinition name="Power" type="System.Int32">100</PropertyDefinition>
+      <PropertyDefinition name="Manufacturer" type="System.String">ACME</PropertyDefinition>
+    </ClassDefinition>
+
+    <ClassDefinition id="C2" name="CentrifugalPump" type="Citect.Ampla.Isa95.EquipmentClassDefinition">
+      <PropertyDefinition name="StageCount" type="System.Int32">2</PropertyDefinition>
+      <ClassDefinition id="C3" name="HighPressure" type="Citect.Ampla.Isa95.EquipmentClassDefinition">
+        <PropertyDefinition name="MaxPressure" type="System.Int32">500</PropertyDefinition>
+      </ClassDefinition>
+    </ClassDefinition>
+  </ClassDefinitions>
+
+  <Item id="1" name="Enterprise" type="Citect.Ampla.Isa95.EnterpriseFolder">
+    <Item id="2" name="SiteA" type="Citect.Ampla.Isa95.SiteFolder">
+      <Item id="3" name="AreaA" type="Citect.Ampla.Isa95.AreaFolder">
+        <Item id="10" name="Pump01" type="Citect.Ampla.Isa95.Equipment">
+          <ItemClassAssociation classDefinitionId="C1"/>
+          <ItemClassAssociation classDefinitionId="C3"/>
+          <Property name="Class.Power">150</Property>
+          <Property name="SerialNumber">SN-12345</Property>
+        </Item>
+      </Item>
+      <Item id="6" name="AreaB" type="Citect.Ampla.Isa95.AreaFolder"/>
+    </Item>
+  </Item>
+</Ampla>
