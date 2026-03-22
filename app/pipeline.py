@@ -1,7 +1,6 @@
 from lxml import etree
 
 from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
-from app.transformers.normalize import normalize_to_xslt_semantics
 
 
 class InvalidXML(Exception):
@@ -24,16 +23,12 @@ def load_xml_from_file(path: str):
 
 
 def run_pipeline_from_root(root):
-    model = transform_ampla_to_b2mml(root)
-    normalize_to_xslt_semantics(model, root)
-    return model
+    return transform_ampla_to_b2mml(root)
 
 
 def run_pipeline_from_file(path: str):
-    root = load_xml_from_file(path)
-    return run_pipeline_from_root(root)
+    return run_pipeline_from_root(load_xml_from_file(path))
 
 
 def run_pipeline_from_bytes(xml_bytes: bytes):
-    root = load_xml_from_bytes(xml_bytes)
-    return run_pipeline_from_root(root)
+    return run_pipeline_from_root(load_xml_from_bytes(xml_bytes))

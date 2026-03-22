@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ShowEquipmentInformation releaseID=""
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns="http://www.wbf.org/xml/b2mml-v0400">
+  <ApplicationArea>
+    <CreationDateTime>2011-01-01T12:00:00Z</CreationDateTime>
+  </ApplicationArea>
+  <DataArea>
+    <Show/>
+    <EquipmentInformation>
+      <PublishedDate>2011-01-01T12:00:00Z</PublishedDate>
+
+      <!-- AcmeMining (Enterprise) -->
+      <Equipment>
+        <ID schemeName="Fullname">AcmeMining</ID>
+        <EquipmentProperty>
+          <ID>Ampla.Name</ID>
+          <Value>
+            <ValueString>AcmeMining</ValueString>
+            <DataType>string</DataType>
+            <UnitOfMeasure/>
+          </Value>
+        </EquipmentProperty>
+
+        <!-- NorthMine (Site) -->
+        <Equipment>
+          <ID schemeName="Fullname">AcmeMining.NorthMine</ID>
+          <EquipmentProperty>
+            <ID>Ampla.Name</ID>
+            <Value>
+              <ValueString>NorthMine</ValueString>
+              <DataType>string</DataType>
+              <UnitOfMeasure/>
+            </Value>
+          </EquipmentProperty>
+
+          <!-- CrusherPlant (Area, class=Crusher.JawCrusher, MaxThroughput overridden) -->
+          <Equipment>
+            <ID schemeName="Fullname">AcmeMining.NorthMine.CrusherPlant</ID>
+            <EquipmentProperty>
+              <ID>Ampla.Name</ID>
+              <Value>
+                <ValueString>CrusherPlant</ValueString>
+                <DataType>string</DataType>
+                <UnitOfMeasure/>
+              </Value>
+            </EquipmentProperty>
+            <EquipmentProperty>
+              <ID>DriveType</ID>
+              <Value>
+                <ValueString>Electric</ValueString>
+                <DataType>string</DataType>
+                <UnitOfMeasure/>
+              </Value>
+            </EquipmentProperty>
+            <EquipmentProperty>
+              <ID>Manufacturer</ID>
+              <Value>
+                <ValueString>Unknown</ValueString>
+                <DataType>string</DataType>
+                <UnitOfMeasure/>
+              </Value>
+            </EquipmentProperty>
+            <EquipmentProperty>
+              <ID>MaxThroughput</ID>
+              <Value>
+                <ValueString>850</ValueString>
+                <DataType>int</DataType>
+                <UnitOfMeasure/>
+              </Value>
+            </EquipmentProperty>
+            <EquipmentClassID>Crusher.JawCrusher</EquipmentClassID>
+            <Location>
+              <EquipmentID>area-1</EquipmentID>
+              <EquipmentElementLevel>Area</EquipmentElementLevel>
+            </Location>
+          </Equipment>
+
+          <!-- ConveyorLoop (Area, class=Crusher.JawCrusher, no override) -->
+          <Equipment>
+            <ID schemeName="Fullname">AcmeMining.NorthMine.ConveyorLoop</ID>
+            <EquipmentProperty>
+              <ID>Ampla.Name</ID>
+              <Value>
+                <ValueString>ConveyorLoop</ValueString>
+                <DataType>string</DataType>
+                <UnitOfMeasure/>
+              </Value>
+            </EquipmentProperty>
+            <EquipmentProperty>
+              <ID>DriveType</ID>
+              <Value>
+                <ValueString>Electric</ValueString>
+                <DataType>string</DataType>
+                <UnitOfMeasure/>
+              </Value>
+            </EquipmentProperty>
+            <EquipmentProperty>
+              <ID>Manufacturer</ID>
+              <Value>
+                <ValueString>Unknown</ValueString>
+                <DataType>string</DataType>
+                <UnitOfMeasure/>
+              </Value>
+            </EquipmentProperty>
+            <EquipmentProperty>
+              <ID>MaxThroughput</ID>
+              <Value>
+                <ValueString>750</ValueString>
+                <DataType>int</DataType>
+                <UnitOfMeasure/>
+              </Value>
+            </EquipmentProperty>
+            <EquipmentClassID>Crusher.JawCrusher</EquipmentClassID>
+            <Location>
+              <EquipmentID>area-2</EquipmentID>
+              <EquipmentElementLevel>Area</EquipmentElementLevel>
+            </Location>
+          </Equipment>
+
+          <!-- WasteStorage (Area, no class) -->
+          <Equipment>
+            <ID schemeName="Fullname">AcmeMining.NorthMine.WasteStorage</ID>
+            <EquipmentProperty>
+              <ID>Ampla.Name</ID>
+              <Value>
+                <ValueString>WasteStorage</ValueString>
+                <DataType>string</DataType>
+                <UnitOfMeasure/>
+              </Value>
+            </EquipmentProperty>
+            <Location>
+              <EquipmentID>area-3</EquipmentID>
+              <EquipmentElementLevel>Area</EquipmentElementLevel>
+            </Location>
+          </Equipment>
+
+          <Location>
+            <EquipmentID>site-1</EquipmentID>
+            <EquipmentElementLevel>Site</EquipmentElementLevel>
+          </Location>
+        </Equipment>
+
+        <!-- SouthMine (Site) -->
+        <Equipment>
+          <ID schemeName="Fullname">AcmeMining.SouthMine</ID>
+          <EquipmentProperty>
+            <ID>Ampla.Name</ID>
+            <Value>
+              <ValueString>SouthMine</ValueString>
+              <DataType>string</DataType>
+              <UnitOfMeasure/>
+            </Value>
+          </EquipmentProperty>
+
+          <!-- ProcessPlant (Area, class=Crusher) -->
+          <Equipment>
+            <ID schemeName="Fullname">AcmeMining.SouthMine.ProcessPlant</ID>
+            <EquipmentProperty>
+              <ID>Ampla.Name</ID>
+              <Value>
+                <ValueString>ProcessPlant</ValueString>
+                <DataType>string</DataType>
+                <UnitOfMeasure/>
+              </Value>
+            </EquipmentProperty>
+            <EquipmentProperty>
+              <ID>DriveType</ID>
+              <Value>
+                <ValueString>Electric</ValueString>
+                <DataType>string</DataType>
+                <UnitOfMeasure/>
+              </Value>
+            </EquipmentProperty>
+            <EquipmentProperty>
+              <ID>Manufacturer</ID>
+              <Value>
+                <ValueString>Unknown</ValueString>
+                <DataType>string</DataType>
+                <UnitOfMeasure/>
+              </Value>
+            </EquipmentProperty>
+            <EquipmentClassID>Crusher</EquipmentClassID>
+            <Location>
+              <EquipmentID>area-4</EquipmentID>
+              <EquipmentElementLevel>Area</EquipmentElementLevel>
+            </Location>
+          </Equipment>
+
+          <Location>
+            <EquipmentID>site-2</EquipmentID>
+            <EquipmentElementLevel>Site</EquipmentElementLevel>
+          </Location>
+        </Equipment>
+
+        <!-- Applications (Other) -->
+        <Equipment>
+          <ID schemeName="Fullname">AcmeMining.Applications</ID>
+          <EquipmentProperty>
+            <ID>Ampla.Name</ID>
+            <Value>
+              <ValueString>Applications</ValueString>
+              <DataType>string</DataType>
+              <UnitOfMeasure/>
+            </Value>
+          </EquipmentProperty>
+          <Location>
+            <EquipmentID>apps-1</EquipmentID>
+            <EquipmentElementLevel>Other</EquipmentElementLevel>
+          </Location>
+        </Equipment>
+
+        <Location>
+          <EquipmentID>ent-1</EquipmentID>
+          <EquipmentElementLevel>Enterprise</EquipmentElementLevel>
+        </Location>
+      </Equipment>
+
+      <!-- EquipmentClass: Crusher -->
+      <EquipmentClass>
+        <ID>Crusher</ID>
+        <EquipmentClassProperty>
+          <ID>Ampla.Name</ID>
+          <Description>Ampla Reserved property</Description>
+          <Value>
+            <ValueString>Crusher</ValueString>
+            <DataType>string</DataType>
+            <UnitOfMeasure/>
+          </Value>
+        </EquipmentClassProperty>
+        <EquipmentClassProperty>
+          <ID>DriveType</ID>
+          <Description></Description>
+          <Value>
+            <ValueString>Electric</ValueString>
+            <DataType>string</DataType>
+            <UnitOfMeasure/>
+          </Value>
+        </EquipmentClassProperty>
+        <EquipmentClassProperty>
+          <ID>Manufacturer</ID>
+          <Description></Description>
+          <Value>
+            <ValueString>Unknown</ValueString>
+            <DataType>string</DataType>
+            <UnitOfMeasure/>
+          </Value>
+        </EquipmentClassProperty>
+      </EquipmentClass>
+
+      <!-- EquipmentClass: Crusher.JawCrusher -->
+      <EquipmentClass>
+        <ID>Crusher.JawCrusher</ID>
+        <EquipmentClassProperty>
+          <ID>Ampla.Parent</ID>
+          <Description>Ampla Reserved property</Description>
+          <Value>
+            <ValueString>Crusher</ValueString>
+            <DataType>string</DataType>
+            <UnitOfMeasure/>
+          </Value>
+        </EquipmentClassProperty>
+        <EquipmentClassProperty>
+          <ID>Ampla.Name</ID>
+          <Description>Ampla Reserved property</Description>
+          <Value>
+            <ValueString>JawCrusher</ValueString>
+            <DataType>string</DataType>
+            <UnitOfMeasure/>
+          </Value>
+        </EquipmentClassProperty>
+        <EquipmentClassProperty>
+          <ID>MaxThroughput</ID>
+          <Description></Description>
+          <Value>
+            <ValueString>750</ValueString>
+            <DataType>int</DataType>
+            <UnitOfMeasure/>
+          </Value>
+        </EquipmentClassProperty>
+      </EquipmentClass>
+
+    </EquipmentInformation>
+  </DataArea>
+</ShowEquipmentInformation>

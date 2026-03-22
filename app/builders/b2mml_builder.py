@@ -2,11 +2,21 @@ from datetime import UTC, datetime
 
 from lxml import etree
 
+from app.models.properties import EquipmentProperty
+
 NS = "http://www.wbf.org/xml/b2mml-v0400"
 
 
 def build_b2mml_xml(model):
-    root = etree.Element("ShowEquipmentInformation", nsmap={None: NS})
+    root = etree.Element(
+        "ShowEquipmentInformation",
+        attrib={"releaseID": ""},
+        nsmap={
+            None: NS,
+            "xsi": "http://www.w3.org/2001/XMLSchema-instance",
+            "xsd": "http://www.w3.org/2001/XMLSchema",
+        },
+    )
 
     app_area = etree.SubElement(root, "ApplicationArea")
     creation = etree.SubElement(app_area, "CreationDateTime")
@@ -16,7 +26,6 @@ def build_b2mml_xml(model):
     etree.SubElement(data_area, "Show")
 
     eq_info = etree.SubElement(data_area, "EquipmentInformation")
-
     published = etree.SubElement(eq_info, "PublishedDate")
     published.text = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
@@ -36,82 +45,62 @@ def build_equipment_xml(eq):
     id_el.set("schemeName", "Fullname")
     id_el.text = eq.full_name
 
+    e.append(
+        build_equipment_property_xml(
+            EquipmentProperty(name="Ampla.Name", value=eq.name, datatype="string")
+        )
+    )
+
     for prop in eq.properties:
         e.append(build_equipment_property_xml(prop))
-
-    for cid in eq.class_ids:
-        cid_el = etree.SubElement(e, "EquipmentClassID")
-        cid_el.text = cid
 
     for child in eq.children:
         e.append(build_equipment_xml(child))
 
-    loc = etree.SubElement(e, "Location")
-    loc_id = etree.SubElement(loc, "EquipmentID")
-    loc_id.text = eq.id
+    for cid in eq.class_ids:
+        etree.SubElement(e, "EquipmentClassID").text = cid
 
-    level = etree.SubElement(loc, "EquipmentElementLevel")
-    level.text = eq.level
+    loc = etree.SubElement(e, "Location")
+    etree.SubElement(loc, "EquipmentID").text = eq.id
+    etree.SubElement(loc, "EquipmentElementLevel").text = eq.level
 
     return e
 
 
 def build_equipment_property_xml(prop):
     ep = etree.Element("EquipmentProperty")
-
-    id_el = etree.SubElement(ep, "ID")
-    id_el.text = prop.name
-
+    etree.SubElement(ep, "ID").text = prop.name
     val = etree.SubElement(ep, "Value")
-
-    vs = etree.SubElement(val, "ValueString")
-    vs.text = prop.value if prop.value is not None else ""
-
-    dt = etree.SubElement(val, "DataType")
-    dt.text = prop.datatype
-
+    etree.SubElement(val, "ValueString").text = (
+        prop.value if prop.value is not None else ""
+    )
+    etree.SubElement(val, "DataType").text = prop.datatype
     etree.SubElement(val, "UnitOfMeasure")
-
     return ep
 
 
 def build_class_xml(cls):
     c = etree.Element("EquipmentClass")
-
-    id_el = etree.SubElement(c, "ID")
-    id_el.text = cls.name if not cls.parent else f"{cls.parent}.{cls.name}"
+    etree.SubElement(c, "ID").text = (
+        cls.name
+    )  # full dotted name e.g. "Crusher.JawCrusher"
 
     if cls.parent:
         parent_prop = etree.SubElement(c, "EquipmentClassProperty")
-        pid = etree.SubElement(parent_prop, "ID")
-        pid.text = "Ampla.Parent"
-
-        desc = etree.SubElement(parent_prop, "Description")
-        desc.text = "Ampla Reserved property"
-
+        etree.SubElement(parent_prop, "ID").text = "Ampla.Parent"
+        etree.SubElement(parent_prop, "Description").text = "Ampla Reserved property"
         val = etree.SubElement(parent_prop, "Value")
-        vs = etree.SubElement(val, "ValueString")
-        vs.text = cls.parent
-
-        dt = etree.SubElement(val, "DataType")
-        dt.text = "string"
-
+        etree.SubElement(val, "ValueString").text = cls.parent
+        etree.SubElement(val, "DataType").text = "string"
         etree.SubElement(val, "UnitOfMeasure")
 
     name_prop = etree.SubElement(c, "EquipmentClassProperty")
-    nid = etree.SubElement(name_prop, "ID")
-    nid.text = "Ampla.Name"
-
-    desc = etree.SubElement(name_prop, "Description")
-    desc.text = "Ampla Reserved property"
-
+    etree.SubElement(name_prop, "ID").text = "Ampla.Name"
+    etree.SubElement(name_prop, "Description").text = "Ampla Reserved property"
     val = etree.SubElement(name_prop, "Value")
-    vs = etree.SubElement(val, "ValueString")
-    vs.text = cls.name
-
-    dt = etree.SubElement(val, "DataType")
-    dt.text = "string"
-
+    # Ampla.Name is the short segment only, not the full dotted name
+    etree.SubElement(val, "ValueString").text = cls.name.split(".")[-1]
+    etree.SubElement(val, "DataType").text = "string"
     etree.SubElement(val, "UnitOfMeasure")
 
     for prop in cls.properties:
@@ -122,21 +111,10 @@ def build_class_xml(cls):
 
 def build_class_property_xml(prop):
     cp = etree.Element("EquipmentClassProperty")
-
-    id_el = etree.SubElement(cp, "ID")
-    id_el.text = prop.name
-
-    desc = etree.SubElement(cp, "Description")
-    desc.text = prop.description or ""
-
+    etree.SubElement(cp, "ID").text = prop.name
+    etree.SubElement(cp, "Description").text = prop.description or ""
     val = etree.SubElement(cp, "Value")
-
-    vs = etree.SubElement(val, "ValueString")
-    vs.text = prop.value or ""
-
-    dt = etree.SubElement(val, "DataType")
-    dt.text = prop.datatype
-
+    etree.SubElement(val, "ValueString").text = prop.value or ""
+    etree.SubElement(val, "DataType").text = prop.datatype
     etree.SubElement(val, "UnitOfMeasure")
-
     return cp

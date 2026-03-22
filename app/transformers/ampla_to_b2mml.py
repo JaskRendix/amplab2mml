@@ -1,54 +1,75 @@
-from lxml import etree
-
 from app.models.classes import EquipmentClass
 from app.models.equipment import Equipment
 from app.models.properties import ClassProperty, EquipmentProperty
 
+# ISA-95 / Ampla type → B2MML EquipmentElementLevel.
+# Types not listed here are accepted but mapped to "Other" (XSLT fallback).
+_LEVEL_MAP = {
+    "Citect.Ampla.Isa95.EnterpriseFolder": "Enterprise",
+    "Citect.Ampla.Isa95.SiteFolder": "Site",
+    "Citect.Ampla.Isa95.AreaFolder": "Area",
+    "Citect.Ampla.General.Server.ApplicationsFolder": "Other",
+}
+
 
 def transform_ampla_to_b2mml(root):
-    equipment = []
+    # 1. Parse equipment tree
+    equipment = [
+        eq
+        for item in root.xpath("/Ampla/Item")
+        for eq in [_convert_item(item)]
+        if eq is not None
+    ]
+
+    # 2. Parse class hierarchy.
+    #    The XSLT skips the top-level ClassDefinition as a container when it
+    #    has ClassDefinition children (get-class-name uses position() > 1).
+    #    When a top-level node has no children it IS the real class.
     classes = []
+    for container in root.xpath("/Ampla/ClassDefinitions/ClassDefinition"):
+        children = container.xpath("ClassDefinition")
+        if children:
+            for child in children:
+                classes.extend(_extract_classes(child, parent_full_name=None))
+        else:
+            classes.extend(_extract_classes(container, parent_full_name=None))
 
-    for item in root.xpath("/Ampla/Item"):
-        eq = convert_item_to_equipment(item)
-        if eq:
-            equipment.append(eq)
+    # 3. Build lookup: every ClassDefinition @id → its B2MML class name
+    class_id_lookup = _build_class_id_lookup(root)
 
-    classes = []
-    for node in root.xpath("/Ampla/ClassDefinitions/ClassDefinition"):
-        classes.extend(extract_classes(node))
-
-    class_id_lookup = build_class_id_lookup(root)
-    class_lookup = {cls.name: cls for cls in classes}
-    compute_class_inheritance(classes)
-
+    # 4. Resolve raw XML IDs → class names on every equipment node
     for eq in equipment:
-        resolve_class_ids(eq, class_id_lookup, class_lookup)
+        _resolve_class_ids(eq, class_id_lookup)
 
-    compute_full_names(equipment)
-    merge_properties_into_equipment(equipment, classes)
+    # 5. Compute dotted full names, skipping nameless nodes
+    _compute_full_names(equipment, parent_full_name=None)
+
+    # 6. Build inheritance chains (needed before property merge)
+    _compute_class_inheritance(classes)
+
+    # 7. Merge class properties into equipment with override handling
+    _merge_properties(equipment, classes)
+
+    # 8. Sort class properties alphabetically (XSLT <xsl:sort select="@name"/>)
+    for cls in classes:
+        cls.properties = sorted(cls.properties, key=lambda p: p.name)
 
     return {"equipment": equipment, "classes": classes}
 
 
-def extract_classes(node, parent_full_name=None):
-    """
-    Recursively build EquipmentClass objects from ClassDefinition hierarchy.
-    """
+def _extract_classes(node, parent_full_name):
     name = node.get("name")
-
     full_name = name if parent_full_name is None else f"{parent_full_name}.{name}"
 
-    props = []
-    for p in node.xpath("PropertyDefinition"):
-        props.append(
-            ClassProperty(
-                name=p.get("name"),
-                description=p.get("description"),
-                value=p.text,
-                datatype=translate_datatype(p.get("type")),
-            )
+    props = [
+        ClassProperty(
+            name=p.get("name"),
+            description=p.get("description"),
+            value=p.text,
+            datatype=_translate_datatype(p.get("type")),
         )
+        for p in node.xpath("PropertyDefinition")
+    ]
 
     cls = EquipmentClass(
         name=full_name,
@@ -56,48 +77,57 @@ def extract_classes(node, parent_full_name=None):
         properties=props,
     )
 
-    classes = [cls]
-
+    result = [cls]
     for child in node.xpath("ClassDefinition"):
-        classes.extend(extract_classes(child, full_name))
+        result.extend(_extract_classes(child, full_name))
 
-    return classes
+    return result
 
 
-def convert_item_to_equipment(node):
+def _build_class_id_lookup(root):
+    """
+    Map every ClassDefinition @id to its B2MML class name.
+    Mirrors the container-vs-real-class logic from _extract_classes exactly.
+    """
+    lookup = {}
+
+    def _walk(node, parent_full_name):
+        name = node.get("name")
+        full_name = name if parent_full_name is None else f"{parent_full_name}.{name}"
+        node_id = node.get("id")
+        if node_id:
+            lookup[node_id] = full_name
+        for child in node.xpath("ClassDefinition"):
+            _walk(child, full_name)
+
+    for container in root.xpath("/Ampla/ClassDefinitions/ClassDefinition"):
+        children = container.xpath("ClassDefinition")
+        if children:
+            for child in children:
+                _walk(child, parent_full_name=None)
+            # defensive: index the container's own @id to its bare name
+            container_id = container.get("id")
+            if container_id and container_id not in lookup:
+                lookup[container_id] = container.get("name")
+        else:
+            _walk(container, parent_full_name=None)
+
+    return lookup
+
+
+def _convert_item(node):
     item_type = node.get("type")
+    # Fall back to "Other" for any type not explicitly listed, matching XSLT.
+    level = _LEVEL_MAP.get(item_type, "Other")
 
-    mapping = {
-        # ISA‑95 hierarchy levels
-        "Citect.Ampla.Isa95.EnterpriseFolder": "Enterprise",
-        "Citect.Ampla.Isa95.SiteFolder": "Site",
-        "Citect.Ampla.Isa95.AreaFolder": "Area",
-        "Citect.Ampla.Isa95.WorkCenter": "WorkCenter",
-        "Citect.Ampla.Isa95.WorkUnit": "WorkUnit",
-        "Citect.Ampla.Isa95.Equipment": "Equipment",
-        # Optional: common Ampla container types
-        "Citect.Ampla.General.Server.ApplicationsFolder": "Other",
-        "Citect.Ampla.General.Server.EquipmentFolder": "EquipmentFolder",
-        # Optional: ISA‑95 production types (if your system uses them)
-        "Citect.Ampla.Isa95.ProcessCell": "ProcessCell",
-        "Citect.Ampla.Isa95.Unit": "Unit",
-        "Citect.Ampla.Isa95.ProductionLine": "ProductionLine",
-    }
-
-    if item_type not in mapping:
-        return None
-
-    children = [convert_item_to_equipment(c) for c in node.xpath("Item")]
-    children = [c for c in children if c is not None]
-    class_ids = [
-        assoc.get("classDefinitionId") for assoc in node.xpath("ItemClassAssociation")
-    ]
-    overrides = {prop.get("name"): prop.text for prop in node.xpath("Property")}
+    children = [c for c in (_convert_item(n) for n in node.xpath("Item")) if c]
+    class_ids = [a.get("classDefinitionId") for a in node.xpath("ItemClassAssociation")]
+    overrides = {p.get("name"): p.text for p in node.xpath("Property")}
 
     return Equipment(
         id=node.get("id"),
         name=node.get("name") or "",
-        level=mapping[item_type],
+        level=level,
         children=children,
         properties=[],
         class_ids=class_ids,
@@ -105,91 +135,48 @@ def convert_item_to_equipment(node):
     )
 
 
-def translate_datatype(dt):
-    if dt == "System.String":
-        return "string"
-    if dt == "System.Int32":
-        return "int"
-    return "string"
+def _resolve_class_ids(eq, lookup):
+    eq.class_ids = [lookup[cid] for cid in eq.class_ids if cid in lookup]
+    for child in eq.children:
+        _resolve_class_ids(child, lookup)
 
 
-def compute_full_names(equipment_list, parent_full_name=None):
+def _compute_full_names(equipment_list, parent_full_name):
     for eq in equipment_list:
-        if parent_full_name:
-            eq.full_name = f"{parent_full_name}.{eq.name}"
+        if eq.name:
+            eq.full_name = (
+                f"{parent_full_name}.{eq.name}" if parent_full_name else eq.name
+            )
+            next_parent = eq.full_name
         else:
-            eq.full_name = eq.name
+            eq.full_name = parent_full_name or ""
+            next_parent = parent_full_name
 
-        compute_full_names(eq.children, eq.full_name)
-
-
-def build_class_lookup(classes):
-    return {cls.name: cls for cls in classes}
+        _compute_full_names(eq.children, next_parent)
 
 
-def compute_class_inheritance(classes):
-    lookup = build_class_lookup(classes)
+def _compute_class_inheritance(classes):
+    lookup = {cls.name: cls for cls in classes}
 
     for cls in classes:
         chain = []
         current = cls
-
         while current:
             chain.append(current)
-            if current.parent and current.parent in lookup:
-                current = lookup[current.parent]
-            else:
-                current = None
-
+            current = lookup.get(current.parent) if current.parent else None
         cls.inheritance_chain = chain[::-1]
 
 
-def build_class_id_lookup(root):
-    """
-    Map ClassDefinition @id to the most specific descendant class name,
-    matching the XSLT get-class-name behavior.
-    """
-    lookup = {}
-
-    for node in root.xpath("/Ampla/ClassDefinitions/ClassDefinition"):
-        class_id = node.get("id")
-        if not class_id:
-            continue
-
-        current = node
-        name_parts = [current.get("name")]
-
-        child = current.find("ClassDefinition")
-        while child is not None:
-            name_parts.append(child.get("name"))
-            current = child
-            child = current.find("ClassDefinition")
-
-        full_name = ".".join(name_parts)
-        lookup[class_id] = full_name
-
-    return lookup
-
-
-def resolve_class_ids(eq, lookup, class_lookup):
-    eq.class_ids = [lookup[cid] for cid in eq.class_ids if cid in lookup]
-
-    for child in eq.children:
-        resolve_class_ids(child, lookup, class_lookup)
-
-
-def merge_properties_into_equipment(equipment, classes):
+def _merge_properties(equipment, classes):
     class_lookup = {cls.name: cls for cls in classes}
 
-    def merge_for(eq):
-        merged = {}
+    def _merge_for(eq):
+        merged: dict[str, EquipmentProperty] = {}
 
         for class_name in eq.class_ids:
-            if class_name not in class_lookup:
+            cls = class_lookup.get(class_name)
+            if not cls:
                 continue
-
-            cls = class_lookup[class_name]
-
             for ancestor in cls.inheritance_chain:
                 for prop in ancestor.properties:
                     merged[prop.name] = EquipmentProperty(
@@ -197,11 +184,7 @@ def merge_properties_into_equipment(equipment, classes):
                     )
 
         for key, value in eq.overrides.items():
-            if "." in key:
-                _, prop_name = key.split(".", 1)
-            else:
-                prop_name = key
-
+            prop_name = key.split(".", 1)[1] if key.startswith("Class.") else key
             if prop_name in merged:
                 merged[prop_name].value = value
             else:
@@ -209,10 +192,18 @@ def merge_properties_into_equipment(equipment, classes):
                     name=prop_name, value=value, datatype="string"
                 )
 
-        eq.properties = list(merged.values())
+        eq.properties = sorted(merged.values(), key=lambda p: p.name)
 
         for child in eq.children:
-            merge_for(child)
+            _merge_for(child)
 
     for eq in equipment:
-        merge_for(eq)
+        _merge_for(eq)
+
+
+def _translate_datatype(dt):
+    if dt == "System.String":
+        return "string"
+    if dt == "System.Int32":
+        return "int"
+    return "string"
