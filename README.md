@@ -17,11 +17,11 @@ The transformer is fully tested and suitable for automation, integration, and co
 
 ## Origin
 
-This project is a modern re‑implementation of the original XSLT stylesheet published here:
-
-https://github.com/Ampla/Project-To-B2MML
-
-The Python version reproduces the transformation logic, adds normalization, and provides a complete API, CLI, and test suite.
+This project is a direct Python reimplementation of the original XSLT
+stylesheet published at https://github.com/Ampla/Project-To-B2MML.
+It reproduces the transformation logic faithfully and adds a CLI, REST
+API, JSON output, and a full test suite including a regression fixture
+verified against the original XSLT behaviour.
 
 ---
 
@@ -96,12 +96,12 @@ curl -X POST -F "file=@tests/data/sample_ampla.xml" http://localhost:8000/conver
 
 ## Project structure
 
-- `app/parsers` — reads Ampla XML  
-- `app/transformers` — converts to internal model and applies normalization  
-- `app/builders` — generates B2MML XML  
-- `app/cli.py` — command‑line interface  
-- `app/api.py` — FastAPI application  
-- `tests/` — full test suite  
+- `app/parsers` — parses Ampla Project XML into an lxml element tree
+- `app/transformers` — converts the parsed tree into an internal equipment and class model
+- `app/builders` — serialises the model to B2MML XML
+- `app/cli.py` — command-line interface
+- `app/api.py` — FastAPI application
+- `tests/` — full test suite including regression fixtures verified against the original XSLT
 
 ---
 
