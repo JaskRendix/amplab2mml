@@ -1,7 +1,7 @@
-import pytest
 from lxml import etree
 
 from app.models.classes import EquipmentClass
+from app.models.equipment import Equipment
 from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
 from app.validators import validate_model
 
@@ -11,7 +11,6 @@ def parse(xml: str):
 
 
 def test_no_warnings_on_valid_model():
-    # classDefinitionId points at the child class id="20", not the container
     xml = """
     <Ampla>
       <Item id="1" name="Mine" type="Citect.Ampla.Isa95.EnterpriseFolder">
@@ -29,12 +28,6 @@ def test_no_warnings_on_valid_model():
 
 
 def test_unknown_class_reference():
-    # Manually inject a class_id that doesn't exist in the model
-    # (resolve_class_ids drops unknown IDs before the validator runs,
-    #  so we test the validator directly with a crafted model)
-    from app.models.classes import EquipmentClass
-    from app.models.equipment import Equipment
-
     eq = Equipment(
         id="1",
         name="Mine",

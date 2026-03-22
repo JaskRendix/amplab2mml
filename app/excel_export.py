@@ -6,13 +6,24 @@ from openpyxl.styles import Font
 
 def export_to_excel(model: dict) -> bytes:
     wb = Workbook()
-
     _write_equipment_sheet(wb, model)
     _write_classes_sheet(wb, model)
+
+    if model.get("warnings"):
+        _write_warnings_sheet(wb, model)
 
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+def _write_warnings_sheet(wb: Workbook, model: dict):
+    ws = wb.create_sheet(title="Warnings")
+    ws.append(["warning"])
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    for w in model["warnings"]:
+        ws.append([w])
 
 
 def _flatten_equipment(equipment_list) -> list:

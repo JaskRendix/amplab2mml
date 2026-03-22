@@ -3,9 +3,11 @@ from fastapi.responses import Response
 
 from app.builders.b2mml_builder import build_b2mml_xml
 from app.cli import model_to_json
+from app.csv_export import export_classes_csv, export_equipment_csv
 from app.diff import diff_models
 from app.excel_export import export_to_excel
 from app.pipeline import InvalidXML, run_pipeline_from_bytes
+from app.stats import compute_stats
 
 app = FastAPI(title="Ampla → B2MML API")
 
@@ -75,3 +77,41 @@ async def convert_excel(file: UploadFile):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=equipment.xlsx"},
     )
+
+
+@app.post("/convert/csv/equipment")
+async def convert_csv_equipment(file: UploadFile):
+    xml_bytes = await file.read()
+    try:
+        model = run_pipeline_from_bytes(xml_bytes)
+    except InvalidXML:
+        raise HTTPException(status_code=400, detail="Invalid XML")
+    return Response(
+        content=export_equipment_csv(model),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=equipment.csv"},
+    )
+
+
+@app.post("/convert/csv/classes")
+async def convert_csv_classes(file: UploadFile):
+    xml_bytes = await file.read()
+    try:
+        model = run_pipeline_from_bytes(xml_bytes)
+    except InvalidXML:
+        raise HTTPException(status_code=400, detail="Invalid XML")
+    return Response(
+        content=export_classes_csv(model),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=classes.csv"},
+    )
+
+
+@app.post("/stats")
+async def stats(file: UploadFile):
+    xml_bytes = await file.read()
+    try:
+        model = run_pipeline_from_bytes(xml_bytes)
+    except InvalidXML:
+        raise HTTPException(status_code=400, detail="Invalid XML")
+    return compute_stats(model).to_dict()

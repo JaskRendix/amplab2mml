@@ -1,4 +1,3 @@
-import pytest
 from lxml import etree
 
 from app.diff import diff_models

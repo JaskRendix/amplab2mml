@@ -1,9 +1,3 @@
-"""
-Replaces test_normalize.py entirely.
-All assertions are against transform_ampla_to_b2mml directly —
-normalize_to_xslt_semantics no longer exists.
-"""
-
 import pytest
 from lxml import etree
 
@@ -18,7 +12,6 @@ def parse(xml: str):
     "xml, expected_names, expected_parents",
     [
         (
-            # container with children → container skipped, children are real classes
             """
         <Ampla>
           <ClassDefinitions>

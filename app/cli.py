@@ -7,6 +7,7 @@ from app.builders.b2mml_builder import build_b2mml_xml
 from app.diff import diff_models
 from app.excel_export import export_to_excel
 from app.pipeline import InvalidXML, run_pipeline_from_file
+from app.stats import compute_stats
 
 logging.basicConfig(level=logging.ERROR, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -61,6 +62,10 @@ def main():
     excel_cmd = subparsers.add_parser("excel", help="Export Ampla XML to Excel")
     excel_cmd.add_argument("input", help="Input Ampla XML file")
     excel_cmd.add_argument("output", help="Output .xlsx file")
+
+    stats_cmd = subparsers.add_parser("stats", help="Show model statistics")
+    stats_cmd.add_argument("input", help="Input Ampla XML file")
+    stats_cmd.add_argument("--format", choices=["text", "json"], default="text")
 
     diff_cmd = subparsers.add_parser("diff", help="Diff two Ampla XML files")
     diff_cmd.add_argument("input_a", help="First Ampla XML file (baseline)")
@@ -128,3 +133,10 @@ def main():
         data = export_to_excel(model)
         with open(args.output, "wb") as f:
             f.write(data)
+
+    elif args.command == "stats":
+        stats = compute_stats(model)
+        if args.format == "json":
+            print(json.dumps(stats.to_dict(), indent=2))
+        else:
+            print(stats.to_text())

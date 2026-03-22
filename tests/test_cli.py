@@ -67,7 +67,6 @@ def test_cli_diff_no_changes(tmp_path):
 
 def test_cli_diff_with_changes(tmp_path):
     input_file = "tests/data/sample_ampla.xml"
-    # minimal xml missing equipment that sample has
     other_file = tmp_path / "other.xml"
     other_file.write_text(
         """
@@ -129,3 +128,41 @@ def test_cli_excel(tmp_path):
     wb = load_workbook(str(output_file))
     assert "Equipment" in wb.sheetnames
     assert "Classes" in wb.sheetnames
+
+
+def test_cli_stats_text():
+    result = subprocess.run(
+        ["b2mml", "stats", "tests/data/sample_ampla.xml"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert "Equipment nodes" in result.stdout
+    assert "Classes" in result.stdout
+    assert "Max depth" in result.stdout
+    assert "Warnings" in result.stdout
+
+
+def test_cli_stats_json():
+    result = subprocess.run(
+        ["b2mml", "stats", "--format", "json", "tests/data/sample_ampla.xml"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    data = json.loads(result.stdout)
+    assert "total_equipment" in data
+    assert "total_classes" in data
+    assert "max_depth" in data
+    assert "warnings" in data
+
+
+def test_cli_excel_has_warnings_sheet(tmp_path):
+    input_file = "tests/data/sample_ampla.xml"
+    output_file = tmp_path / "out.xlsx"
+    subprocess.run(
+        ["b2mml", "excel", input_file, str(output_file)],
+        capture_output=True,
+    )
+    wb = load_workbook(str(output_file))
+    assert "Warnings" not in wb.sheetnames
