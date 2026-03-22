@@ -6,6 +6,7 @@ import sys
 from app.builders.b2mml_builder import build_b2mml_xml
 from app.diff import diff_models
 from app.excel_export import export_to_excel
+from app.html_report import export_to_html
 from app.pipeline import InvalidXML, run_pipeline_from_file
 from app.stats import compute_stats
 
@@ -62,6 +63,10 @@ def main():
     excel_cmd = subparsers.add_parser("excel", help="Export Ampla XML to Excel")
     excel_cmd.add_argument("input", help="Input Ampla XML file")
     excel_cmd.add_argument("output", help="Output .xlsx file")
+
+    html_cmd = subparsers.add_parser("html", help="Export Ampla XML to HTML report")
+    html_cmd.add_argument("input", help="Input Ampla XML file")
+    html_cmd.add_argument("output", help="Output .html file")
 
     stats_cmd = subparsers.add_parser("stats", help="Show model statistics")
     stats_cmd.add_argument("input", help="Input Ampla XML file")
@@ -140,3 +145,8 @@ def main():
             print(json.dumps(stats.to_dict(), indent=2))
         else:
             print(stats.to_text())
+
+    elif args.command == "html":
+        html = export_to_html(model)
+        with open(args.output, "w", encoding="utf-8") as f:
+            f.write(html)

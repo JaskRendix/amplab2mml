@@ -6,6 +6,7 @@ from app.cli import model_to_json
 from app.csv_export import export_classes_csv, export_equipment_csv
 from app.diff import diff_models
 from app.excel_export import export_to_excel
+from app.html_report import export_to_html
 from app.pipeline import InvalidXML, run_pipeline_from_bytes
 from app.stats import compute_stats
 
@@ -115,3 +116,16 @@ async def stats(file: UploadFile):
     except InvalidXML:
         raise HTTPException(status_code=400, detail="Invalid XML")
     return compute_stats(model).to_dict()
+
+
+@app.post("/convert/html")
+async def convert_html(file: UploadFile):
+    xml_bytes = await file.read()
+    try:
+        model = run_pipeline_from_bytes(xml_bytes)
+    except InvalidXML:
+        raise HTTPException(status_code=400, detail="Invalid XML")
+    return Response(
+        content=export_to_html(model),
+        media_type="text/html; charset=utf-8",
+    )
