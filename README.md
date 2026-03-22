@@ -89,6 +89,11 @@ Output as JSON:
 b2mml stats --format json input.xml
 ```
 
+### Export to HTML report
+```
+b2mml html input.xml report.html
+```
+
 ### Diff two Ampla XML files
 ```
 b2mml diff baseline.xml updated.xml
@@ -122,12 +127,14 @@ uvicorn app.api:app --reload
 | POST | `/convert/excel` | Receive Excel workbook |
 | POST | `/convert/csv/equipment` | Receive equipment CSV |
 | POST | `/convert/csv/classes` | Receive classes CSV |
+| POST | `/convert/html` | Receive HTML report |
 | POST | `/stats` | Receive model statistics |
 | POST | `/diff/json` | Diff two files, receive JSON |
 | POST | `/diff/text` | Diff two files, receive plain text |
 
 All `/convert/*` and `/stats` endpoints accept a single `file` upload field.
 `/diff/*` endpoints accept `file_a` and `file_b`.
+Interactive API docs are available at `http://localhost:8000/docs` once the server is running.
 
 Examples:
 ```
@@ -150,6 +157,8 @@ curl -X POST -F "file_a=@baseline.xml" -F "file_b=@updated.xml" http://localhost
 - `app/csv_export.py` — exports the model to CSV
 - `app/cli.py` — command-line interface
 - `app/api.py` — FastAPI application
+- `app/html_report.py` — exports the model to a self-contained HTML report
+- `app/schemas.py` — Pydantic response models for the FastAPI endpoints
 - `tests/` — full test suite including regression fixtures verified against the original XSLT
 
 ---
