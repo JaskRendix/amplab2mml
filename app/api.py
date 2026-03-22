@@ -4,6 +4,7 @@ from fastapi.responses import Response
 from app.builders.b2mml_builder import build_b2mml_xml
 from app.cli import model_to_json
 from app.diff import diff_models
+from app.excel_export import export_to_excel
 from app.pipeline import InvalidXML, run_pipeline_from_bytes
 
 app = FastAPI(title="Ampla → B2MML API")
@@ -59,3 +60,18 @@ async def diff_text(file_a: UploadFile, file_b: UploadFile):
         raise HTTPException(status_code=400, detail="Invalid XML")
     result = diff_models(model_a, model_b)
     return Response(content=result.to_text(), media_type="text/plain")
+
+
+@app.post("/convert/excel")
+async def convert_excel(file: UploadFile):
+    xml_bytes = await file.read()
+    try:
+        model = run_pipeline_from_bytes(xml_bytes)
+    except InvalidXML:
+        raise HTTPException(status_code=400, detail="Invalid XML")
+    data = export_to_excel(model)
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=equipment.xlsx"},
+    )

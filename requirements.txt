@@ -3,3 +3,4 @@ uvicorn
 lxml
 pydantic
 python-multipart
+openpyxl

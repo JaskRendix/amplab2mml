@@ -1,6 +1,8 @@
 import json
 import subprocess
 
+from openpyxl import load_workbook
+
 
 def test_cli_help():
     result = subprocess.run(["b2mml", "--help"], capture_output=True, text=True)
@@ -112,3 +114,18 @@ def test_cli_diff_output_file(tmp_path):
     assert result.returncode == 0
     assert output_file.exists()
     assert "No differences found." in output_file.read_text()
+
+
+def test_cli_excel(tmp_path):
+    input_file = "tests/data/sample_ampla.xml"
+    output_file = tmp_path / "out.xlsx"
+    result = subprocess.run(
+        ["b2mml", "excel", input_file, str(output_file)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert output_file.exists()
+    wb = load_workbook(str(output_file))
+    assert "Equipment" in wb.sheetnames
+    assert "Classes" in wb.sheetnames

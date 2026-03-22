@@ -5,6 +5,7 @@ import sys
 
 from app.builders.b2mml_builder import build_b2mml_xml
 from app.diff import diff_models
+from app.excel_export import export_to_excel
 from app.pipeline import InvalidXML, run_pipeline_from_file
 
 logging.basicConfig(level=logging.ERROR, format="%(levelname)s: %(message)s")
@@ -56,6 +57,10 @@ def main():
     json_cmd = subparsers.add_parser("json", help="Convert Ampla XML to JSON model")
     json_cmd.add_argument("input", help="Input Ampla XML file")
     json_cmd.add_argument("output", nargs="?", help="Optional output JSON file")
+
+    excel_cmd = subparsers.add_parser("excel", help="Export Ampla XML to Excel")
+    excel_cmd.add_argument("input", help="Input Ampla XML file")
+    excel_cmd.add_argument("output", help="Output .xlsx file")
 
     diff_cmd = subparsers.add_parser("diff", help="Diff two Ampla XML files")
     diff_cmd.add_argument("input_a", help="First Ampla XML file (baseline)")
@@ -118,3 +123,8 @@ def main():
         else:
             json.dump(serializable, sys.stdout, indent=2)
             sys.stdout.write("\n")
+
+    elif args.command == "excel":
+        data = export_to_excel(model)
+        with open(args.output, "wb") as f:
+            f.write(data)

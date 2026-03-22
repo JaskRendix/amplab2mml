@@ -1,4 +1,7 @@
+from io import BytesIO
+
 from fastapi.testclient import TestClient
+from openpyxl import load_workbook
 
 from app.api import app
 
@@ -52,3 +55,22 @@ def test_large_file():
         "/convert/json", files={"file": ("large.xml", xml, "application/xml")}
     )
     assert response.status_code == 200
+
+
+def test_convert_excel():
+    xml = open("tests/data/sample_ampla.xml").read()
+    response = client.post(
+        "/convert/excel", files={"file": ("sample.xml", xml, "application/xml")}
+    )
+    assert response.status_code == 200
+    assert "spreadsheetml" in response.headers["content-type"]
+    wb = load_workbook(BytesIO(response.content))
+    assert "Equipment" in wb.sheetnames
+    assert "Classes" in wb.sheetnames
+
+
+def test_convert_excel_invalid_xml():
+    response = client.post(
+        "/convert/excel", files={"file": ("bad.xml", "<not-xml>", "application/xml")}
+    )
+    assert response.status_code in (400, 422)
