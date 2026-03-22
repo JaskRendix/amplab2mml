@@ -1,6 +1,11 @@
+import logging
+
 from lxml import etree
 
 from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
+from app.validators import validate_model
+
+logger = logging.getLogger(__name__)
 
 
 class InvalidXML(Exception):
@@ -23,7 +28,12 @@ def load_xml_from_file(path: str):
 
 
 def run_pipeline_from_root(root):
-    return transform_ampla_to_b2mml(root)
+    model = transform_ampla_to_b2mml(root)
+    warnings = validate_model(model)
+    for w in warnings:
+        logger.warning(w)
+    model["warnings"] = warnings
+    return model
 
 
 def run_pipeline_from_file(path: str):
