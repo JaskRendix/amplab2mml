@@ -6,12 +6,16 @@ This project converts an Ampla Project XML export into an ISA‑95 B2MML Equipme
 
 ## Purpose
 
-Ampla Project XML files contain equipment definitions, hierarchy, classes, and properties. This tool reads that XML, normalizes it to match the behavior of the original XSLT, and produces either:
+Ampla Project XML files contain equipment definitions, hierarchy, classes, and properties.
+This tool reads that XML and produces either:
+- B2MML Equipment XML
+- a structured JSON model
 
-- B2MML Equipment XML  
-- a structured JSON model  
+It also provides validation warnings for structural issues in the source data,
+and a diff mode to compare two Ampla configurations and report what changed.
 
-The transformer is fully tested and suitable for automation, integration, and comparison of Ampla project configurations.
+The transformer is fully tested and suitable for automation, integration, and
+comparison of Ampla project configurations.
 
 ---
 
@@ -70,6 +74,21 @@ If no output file is provided, JSON is written to stdout:
 b2mml json tests/data/sample_ampla.xml
 ```
 
+### Diff two Ampla XML files
+
+```
+b2mml diff baseline.xml updated.xml
+```
+Output as JSON:
+```
+b2mml diff --format json baseline.xml updated.xml
+```
+Save to file:
+```
+b2mml diff baseline.xml updated.xml diff.txt
+```
+Exits with code `0` if no differences, `1` if differences found — suitable for CI.
+
 ---
 
 ## API usage
@@ -77,19 +96,21 @@ b2mml json tests/data/sample_ampla.xml
 Start the FastAPI server:
 
 ```
-uvicorn app.main:app --reload
+uvicorn app.api:app --reload
 ```
 
 ### Endpoints
 
-- `GET /health` — basic health check  
-- `POST /convert/json` — upload an Ampla XML file, receive JSON  
-- `POST /convert/xml` — upload an Ampla XML file, receive B2MML XML  
+- `GET /health` — basic health check
+- `POST /convert/json` — upload an Ampla XML file, receive JSON
+- `POST /convert/xml` — upload an Ampla XML file, receive B2MML XML
+- `POST /diff/json` — upload two Ampla XML files, receive a JSON diff
+- `POST /diff/text` — upload two Ampla XML files, receive a plain text diff
 
-Example using `curl`:
-
+Example:
 ```
 curl -X POST -F "file=@tests/data/sample_ampla.xml" http://localhost:8000/convert/json
+curl -X POST -F "file_a=@baseline.xml" -F "file_b=@updated.xml" http://localhost:8000/diff/text
 ```
 
 ---
@@ -99,6 +120,8 @@ curl -X POST -F "file=@tests/data/sample_ampla.xml" http://localhost:8000/conver
 - `app/parsers` — parses Ampla Project XML into an lxml element tree
 - `app/transformers` — converts the parsed tree into an internal equipment and class model
 - `app/builders` — serialises the model to B2MML XML
+- `app/validators.py` — validates the model and returns human-readable warnings
+- `app/diff.py` — compares two models and reports structural differences
 - `app/cli.py` — command-line interface
 - `app/api.py` — FastAPI application
 - `tests/` — full test suite including regression fixtures verified against the original XSLT

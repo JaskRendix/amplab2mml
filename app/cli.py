@@ -4,6 +4,7 @@ import logging
 import sys
 
 from app.builders.b2mml_builder import build_b2mml_xml
+from app.diff import diff_models
 from app.pipeline import InvalidXML, run_pipeline_from_file
 
 logging.basicConfig(level=logging.ERROR, format="%(levelname)s: %(message)s")
@@ -39,6 +40,7 @@ def model_to_json(model):
     return {
         "equipment": [eq_to_dict(eq) for eq in model["equipment"]],
         "classes": [cls_to_dict(cls) for cls in model["classes"]],
+        "warnings": model.get("warnings", []),
     }
 
 
@@ -55,14 +57,46 @@ def main():
     json_cmd.add_argument("input", help="Input Ampla XML file")
     json_cmd.add_argument("output", nargs="?", help="Optional output JSON file")
 
+    diff_cmd = subparsers.add_parser("diff", help="Diff two Ampla XML files")
+    diff_cmd.add_argument("input_a", help="First Ampla XML file (baseline)")
+    diff_cmd.add_argument("input_b", help="Second Ampla XML file (changed)")
+    diff_cmd.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text)",
+    )
+    diff_cmd.add_argument("output", nargs="?", help="Optional output file")
+
     args = parser.parse_args()
 
     if args.verbose:
         logger.setLevel(logging.DEBUG)
-        logger.debug("Verbose mode enabled")
+
+    if args.command == "diff":
+        try:
+            model_a = run_pipeline_from_file(args.input_a)
+            model_b = run_pipeline_from_file(args.input_b)
+        except InvalidXML as e:
+            logger.error(str(e))
+            sys.exit(1)
+
+        result = diff_models(model_a, model_b)
+
+        if args.format == "json":
+            output = json.dumps(result.to_dict(), indent=2)
+        else:
+            output = result.to_text()
+
+        if args.output:
+            with open(args.output, "w", encoding="utf-8") as f:
+                f.write(output)
+        else:
+            print(output)
+
+        sys.exit(0 if result.is_empty() else 1)
 
     try:
-        logger.debug(f"Loading and transforming XML from: {args.input}")
         model = run_pipeline_from_file(args.input)
     except InvalidXML as e:
         logger.error(str(e))
@@ -72,14 +106,11 @@ def main():
         sys.exit(1)
 
     if args.command == "convert":
-        logger.debug("Building B2MML XML output")
         xml = build_b2mml_xml(model)
         with open(args.output, "w", encoding="utf-8") as f:
             f.write(xml)
-        return
 
-    if args.command == "json":
-        logger.debug("Building JSON output")
+    elif args.command == "json":
         serializable = model_to_json(model)
         if args.output:
             with open(args.output, "w", encoding="utf-8") as f:
