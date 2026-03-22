@@ -136,3 +136,23 @@ def test_convert_csv_invalid_xml():
         files={"file": ("bad.xml", "<not-xml>", "application/xml")},
     )
     assert response.status_code in (400, 422)
+
+
+def test_convert_html():
+    xml = open("tests/data/sample_ampla.xml").read()
+    response = client.post(
+        "/convert/html",
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+    assert "<!DOCTYPE html>" in response.text
+    assert "AcmeMining" in response.text
+
+
+def test_convert_html_invalid_xml():
+    response = client.post(
+        "/convert/html",
+        files={"file": ("bad.xml", "<not-xml>", "application/xml")},
+    )
+    assert response.status_code in (400, 422)

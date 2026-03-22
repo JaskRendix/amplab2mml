@@ -166,3 +166,18 @@ def test_cli_excel_has_warnings_sheet(tmp_path):
     )
     wb = load_workbook(str(output_file))
     assert "Warnings" not in wb.sheetnames
+
+
+def test_cli_html(tmp_path):
+    input_file = "tests/data/sample_ampla.xml"
+    output_file = tmp_path / "report.html"
+    result = subprocess.run(
+        ["b2mml", "html", input_file, str(output_file)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert output_file.exists()
+    content = output_file.read_text()
+    assert "<!DOCTYPE html>" in content
+    assert "AcmeMining" in content
