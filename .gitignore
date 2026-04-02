@@ -5,6 +5,8 @@
 # Python cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
 # Packaging metadata
 *.egg-info/
