@@ -19,3 +19,4 @@ dist/
 # Generated output
 output.xml
 output.json
+ampla_api.log

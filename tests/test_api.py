@@ -156,3 +156,183 @@ def test_convert_html_invalid_xml():
         files={"file": ("bad.xml", "<not-xml>", "application/xml")},
     )
     assert response.status_code in (400, 422)
+
+
+def test_diff_json_no_changes():
+    xml = open("tests/data/sample_ampla.xml").read()
+
+    response = client.post(
+        "/diff/json",
+        files={
+            "file_a": ("a.xml", xml, "application/xml"),
+            "file_b": ("b.xml", xml, "application/xml"),
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["equipment_added"] == []
+    assert data["equipment_removed"] == []
+    assert data["equipment_level_changed"] == []
+    assert data["equipment_properties_changed"] == []
+    assert data["classes_added"] == []
+    assert data["classes_removed"] == []
+    assert data["class_properties_changed"] == []
+
+
+def test_diff_json_with_changes():
+    xml_a = open("tests/data/sample_ampla.xml").read()
+    xml_b = xml_a.replace("AcmeMining", "AcmeMiningModified")
+
+    response = client.post(
+        "/diff/json",
+        files={
+            "file_a": ("a.xml", xml_a, "application/xml"),
+            "file_b": ("b.xml", xml_b, "application/xml"),
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # At least one category must contain changes
+    assert any(
+        len(data[key]) > 0
+        for key in [
+            "equipment_added",
+            "equipment_removed",
+            "equipment_level_changed",
+            "equipment_properties_changed",
+            "classes_added",
+            "classes_removed",
+            "class_properties_changed",
+        ]
+    )
+
+
+def test_diff_text_no_changes():
+    xml = open("tests/data/sample_ampla.xml").read()
+
+    response = client.post(
+        "/diff/text",
+        files={
+            "file_a": ("a.xml", xml, "application/xml"),
+            "file_b": ("b.xml", xml, "application/xml"),
+        },
+    )
+
+    assert response.status_code == 200
+    assert "no differences" in response.text.lower() or response.text.strip() == ""
+
+
+def test_diff_text_invalid_xml():
+    response = client.post(
+        "/diff/text",
+        files={
+            "file_a": ("a.xml", "<bad>", "application/xml"),
+            "file_b": ("b.xml", "<bad>", "application/xml"),
+        },
+    )
+    assert response.status_code in (400, 422)
+
+
+def test_request_id_passthrough():
+    xml = open("tests/data/sample_ampla.xml").read()
+
+    response = client.post(
+        "/convert/json",
+        headers={"X-Request-ID": "test-123"},
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["X-Request-ID"] == "test-123"
+
+
+def test_request_id_generated():
+    xml = open("tests/data/sample_ampla.xml").read()
+
+    response = client.post(
+        "/convert/json",
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+
+    assert response.status_code == 200
+    assert "X-Request-ID" in response.headers
+    assert len(response.headers["X-Request-ID"]) > 0
+
+
+def test_excel_filename():
+    xml = open("tests/data/sample_ampla.xml").read()
+    response = client.post(
+        "/convert/excel",
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+    assert (
+        "attachment; filename=equipment.xlsx" in response.headers["content-disposition"]
+    )
+
+
+def test_csv_equipment_filename():
+    xml = open("tests/data/sample_ampla.xml").read()
+    response = client.post(
+        "/convert/csv/equipment",
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+    assert (
+        "attachment; filename=equipment.csv" in response.headers["content-disposition"]
+    )
+
+
+def test_csv_classes_filename():
+    xml = open("tests/data/sample_ampla.xml").read()
+    response = client.post(
+        "/convert/csv/classes",
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+    assert "attachment; filename=classes.csv" in response.headers["content-disposition"]
+
+
+def test_excel_columns():
+    xml = open("tests/data/sample_ampla.xml").read()
+    response = client.post(
+        "/convert/excel",
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+
+    wb = load_workbook(BytesIO(response.content))
+    ws = wb["Equipment"]
+
+    headers = [cell.value for cell in ws[1]]
+
+    assert "full_name" in headers
+    assert "level" in headers
+    assert "class_ids" in headers
+
+
+def test_html_structure():
+    xml = open("tests/data/sample_ampla.xml").read()
+    response = client.post(
+        "/convert/html",
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+
+    text = response.text
+    assert "<html" in text.lower()
+    assert "<body" in text.lower()
+    assert "Equipment" in text  # section header
+
+
+def test_json_includes_warnings():
+    xml = open("tests/data/sample_ampla.xml").read()
+
+    response = client.post(
+        "/convert/json",
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "warnings" in data
+    assert isinstance(data["warnings"], list)

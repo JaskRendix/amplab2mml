@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi import FastAPI, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 
 from app.builders.b2mml_builder import build_b2mml_xml
@@ -7,6 +7,12 @@ from app.csv_export import export_classes_csv, export_equipment_csv
 from app.diff import diff_models
 from app.excel_export import export_to_excel
 from app.html_report import export_to_html
+from app.logging_setup import (
+    log_invalid_xml,
+    logger,
+    request_id_middleware,
+    request_logging_middleware,
+)
 from app.pipeline import InvalidXML, run_pipeline_from_bytes
 from app.schemas import DiffResponse, HealthResponse, ModelResponse, StatsResponse
 from app.stats import compute_stats
@@ -18,74 +24,84 @@ app = FastAPI(
 )
 
 
+app.middleware("http")(request_id_middleware)
+app.middleware("http")(request_logging_middleware)
+
+
 @app.get("/health", response_model=HealthResponse)
 def health():
     try:
         run_pipeline_from_bytes(b"<Ampla></Ampla>")
         return {"status": "ok", "pipeline": "ready"}
     except Exception:
+        logger.error("Health check failed")
         return {"status": "error", "pipeline": "failed"}
 
 
 @app.post("/convert/json", response_model=ModelResponse)
-async def convert_json(file: UploadFile):
+async def convert_json(file: UploadFile, request: Request):
     xml_bytes = await file.read()
     try:
         model = run_pipeline_from_bytes(xml_bytes)
     except InvalidXML:
+        log_invalid_xml("/convert/json", request)
         raise HTTPException(status_code=400, detail="Invalid XML")
     return model_to_json(model)
 
 
 @app.post("/convert/xml", responses={200: {"content": {"application/xml": {}}}})
-async def convert_xml(file: UploadFile):
+async def convert_xml(file: UploadFile, request: Request):
     xml_bytes = await file.read()
     try:
         model = run_pipeline_from_bytes(xml_bytes)
     except InvalidXML:
+        log_invalid_xml("/convert/xml", request)
         raise HTTPException(status_code=400, detail="Invalid XML")
     xml = build_b2mml_xml(model)
     return Response(content=xml, media_type="application/xml")
 
 
 @app.post("/diff/json", response_model=DiffResponse)
-async def diff_json(file_a: UploadFile, file_b: UploadFile):
+async def diff_json(file_a: UploadFile, file_b: UploadFile, request: Request):
     try:
         model_a = run_pipeline_from_bytes(await file_a.read())
         model_b = run_pipeline_from_bytes(await file_b.read())
     except InvalidXML:
+        log_invalid_xml("/diff/json", request)
         raise HTTPException(status_code=400, detail="Invalid XML")
+
     result = diff_models(model_a, model_b)
+    if not result.is_empty():
+        logger.info(f"req={request.state.request_id} diff detected")
+
     return result.to_dict()
 
 
 @app.post("/diff/text", responses={200: {"content": {"text/plain": {}}}})
-async def diff_text(file_a: UploadFile, file_b: UploadFile):
+async def diff_text(file_a: UploadFile, file_b: UploadFile, request: Request):
     try:
         model_a = run_pipeline_from_bytes(await file_a.read())
         model_b = run_pipeline_from_bytes(await file_b.read())
     except InvalidXML:
+        log_invalid_xml("/diff/text", request)
         raise HTTPException(status_code=400, detail="Invalid XML")
+
     result = diff_models(model_a, model_b)
+    if not result.is_empty():
+        logger.info(f"req={request.state.request_id} diff detected")
+
     return Response(content=result.to_text(), media_type="text/plain")
 
 
-@app.post(
-    "/convert/excel",
-    responses={
-        200: {
-            "content": {
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {}
-            }
-        }
-    },
-)
-async def convert_excel(file: UploadFile):
+@app.post("/convert/excel")
+async def convert_excel(file: UploadFile, request: Request):
     xml_bytes = await file.read()
     try:
         model = run_pipeline_from_bytes(xml_bytes)
     except InvalidXML:
+        log_invalid_xml("/convert/excel", request)
         raise HTTPException(status_code=400, detail="Invalid XML")
+
     data = export_to_excel(model)
     return Response(
         content=data,
@@ -94,13 +110,15 @@ async def convert_excel(file: UploadFile):
     )
 
 
-@app.post("/convert/csv/equipment", responses={200: {"content": {"text/csv": {}}}})
-async def convert_csv_equipment(file: UploadFile):
+@app.post("/convert/csv/equipment")
+async def convert_csv_equipment(file: UploadFile, request: Request):
     xml_bytes = await file.read()
     try:
         model = run_pipeline_from_bytes(xml_bytes)
     except InvalidXML:
+        log_invalid_xml("/convert/csv/equipment", request)
         raise HTTPException(status_code=400, detail="Invalid XML")
+
     return Response(
         content=export_equipment_csv(model),
         media_type="text/csv",
@@ -108,13 +126,15 @@ async def convert_csv_equipment(file: UploadFile):
     )
 
 
-@app.post("/convert/csv/classes", responses={200: {"content": {"text/csv": {}}}})
-async def convert_csv_classes(file: UploadFile):
+@app.post("/convert/csv/classes")
+async def convert_csv_classes(file: UploadFile, request: Request):
     xml_bytes = await file.read()
     try:
         model = run_pipeline_from_bytes(xml_bytes)
     except InvalidXML:
+        log_invalid_xml("/convert/csv/classes", request)
         raise HTTPException(status_code=400, detail="Invalid XML")
+
     return Response(
         content=export_classes_csv(model),
         media_type="text/csv",
@@ -123,22 +143,26 @@ async def convert_csv_classes(file: UploadFile):
 
 
 @app.post("/stats", response_model=StatsResponse)
-async def stats(file: UploadFile):
+async def stats(file: UploadFile, request: Request):
     xml_bytes = await file.read()
     try:
         model = run_pipeline_from_bytes(xml_bytes)
     except InvalidXML:
+        log_invalid_xml("/stats", request)
         raise HTTPException(status_code=400, detail="Invalid XML")
+
     return compute_stats(model).to_dict()
 
 
-@app.post("/convert/html", responses={200: {"content": {"text/html": {}}}})
-async def convert_html(file: UploadFile):
+@app.post("/convert/html")
+async def convert_html(file: UploadFile, request: Request):
     xml_bytes = await file.read()
     try:
         model = run_pipeline_from_bytes(xml_bytes)
     except InvalidXML:
+        log_invalid_xml("/convert/html", request)
         raise HTTPException(status_code=400, detail="Invalid XML")
+
     return Response(
         content=export_to_html(model),
         media_type="text/html; charset=utf-8",
