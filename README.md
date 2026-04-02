@@ -145,6 +145,28 @@ curl -X POST -F "file_a=@baseline.xml" -F "file_b=@updated.xml" http://localhost
 
 ---
 
+## Docker Compose (local development)
+
+The project includes a Docker Compose setup for running the API with hot‑reload and without needing to rebuild the image on every change.
+
+### Start the API
+```
+make up
+```
+
+The service will be available at:
+
+```
+http://localhost:8000
+```
+
+### Stop the service
+```
+make down
+```
+
+---
+
 ## Project structure
 
 - `app/parsers` — parses Ampla Project XML into an lxml element tree
