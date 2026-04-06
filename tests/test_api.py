@@ -336,3 +336,86 @@ def test_json_includes_warnings():
     data = response.json()
     assert "warnings" in data
     assert isinstance(data["warnings"], list)
+
+
+def test_empty_file():
+    response = client.post(
+        "/convert/json",
+        files={"file": ("empty.xml", "", "application/xml")},
+    )
+    assert response.status_code in (400, 422)
+
+
+def test_non_xml_content():
+    response = client.post(
+        "/convert/json",
+        files={"file": ("weird.txt", "not xml at all", "text/plain")},
+    )
+    assert response.status_code in (400, 422)
+
+
+def test_excel_is_binary():
+    xml = open("tests/data/sample_ampla.xml").read()
+    response = client.post(
+        "/convert/excel",
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+    assert isinstance(response.content, bytes)
+
+
+def test_all_endpoints_return_request_id():
+    xml = open("tests/data/sample_ampla.xml").read()
+    endpoints = [
+        "/convert/json",
+        "/convert/xml",
+        "/convert/excel",
+        "/convert/csv/equipment",
+        "/convert/csv/classes",
+        "/convert/html",
+        "/stats",
+    ]
+    for ep in endpoints:
+        response = client.post(ep, files={"file": ("x.xml", xml, "application/xml")})
+        assert "X-Request-ID" in response.headers
+
+
+def test_html_contains_equipment_section():
+    xml = open("tests/data/sample_ampla.xml").read()
+    response = client.post(
+        "/convert/html",
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+
+    assert response.status_code == 200
+    text = response.text
+
+    # The exact <h2> tag is not guaranteed; check for the section label
+    assert "Equipment" in text
+
+
+def test_diff_json_detects_name_change_only():
+    xml_a = open("tests/data/sample_ampla.xml").read()
+    xml_b = xml_a.replace("AcmeMining", "X")
+
+    response = client.post(
+        "/diff/json",
+        files={
+            "file_a": ("a.xml", xml_a, "application/xml"),
+            "file_b": ("b.xml", xml_b, "application/xml"),
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Name change is not a property diff
+    assert data["equipment_properties_changed"] == []
+
+    # Entire subtree is removed and re-added
+    assert len(data["equipment_removed"]) > 1
+    assert len(data["equipment_added"]) > 1
+
+    # No class-level changes
+    assert data["classes_added"] == []
+    assert data["classes_removed"] == []
+    assert data["class_properties_changed"] == []
