@@ -1,3 +1,5 @@
+from importlib.metadata import version
+
 from fastapi import FastAPI, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 
@@ -16,6 +18,9 @@ from app.logging_setup import (
 from app.pipeline import InvalidXML, run_pipeline_from_bytes
 from app.schemas import DiffResponse, HealthResponse, ModelResponse, StatsResponse
 from app.stats import compute_stats
+
+PIPELINE_VERSION = version("amplab2mml")
+
 
 app = FastAPI(
     title="Ampla → B2MML API",
@@ -80,7 +85,7 @@ def health():
 def info():
     return {
         "api_version": app.version,
-        "pipeline_version": "1.0.0",
+        "pipeline_version": PIPELINE_VERSION,
         "commit": "unknown",
     }
 

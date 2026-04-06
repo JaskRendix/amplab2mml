@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import sys
+from importlib.metadata import version
 
 from app.builders.b2mml_builder import build_b2mml_xml
 from app.diff import diff_models
@@ -9,6 +10,8 @@ from app.excel_export import export_to_excel
 from app.html_report import export_to_html
 from app.pipeline import InvalidXML, run_pipeline_from_file
 from app.stats import compute_stats
+
+CLI_VERSION = version("amplab2mml")
 
 logging.basicConfig(level=logging.ERROR, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -50,6 +53,7 @@ def model_to_json(model):
 def main():
     parser = argparse.ArgumentParser(prog="b2mml")
     parser.add_argument("--verbose", action="store_true", help="Enable debug logging")
+    parser.add_argument("--version", action="store_true", help="Show version and exit")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     convert = subparsers.add_parser("convert", help="Convert Ampla XML to B2MML XML")
@@ -87,6 +91,10 @@ def main():
 
     if args.verbose:
         logger.setLevel(logging.DEBUG)
+
+    if args.version:
+        print(f"amplab2mml {CLI_VERSION}")
+        sys.exit(0)
 
     if args.command == "diff":
         try:
