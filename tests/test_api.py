@@ -419,3 +419,19 @@ def test_diff_json_detects_name_change_only():
     assert data["classes_added"] == []
     assert data["classes_removed"] == []
     assert data["class_properties_changed"] == []
+
+
+def test_openapi_contains_examples():
+    spec = client.get("/openapi.json").json()
+    path = spec["paths"]["/convert/json"]["post"]
+    assert "requestBody" in path
+    assert "example" in path["requestBody"]["content"]["multipart/form-data"]
+
+
+def test_info():
+    response = client.get("/info")
+    assert response.status_code == 200
+    data = response.json()
+    assert "api_version" in data
+    assert "pipeline_version" in data
+    assert "commit" in data

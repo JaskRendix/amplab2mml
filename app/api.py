@@ -55,7 +55,13 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     )
 
 
-@app.get("/health", response_model=HealthResponse, tags=["system"])
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    tags=["system"],
+    summary="Health check",
+    operation_id="health",
+)
 def health():
     try:
         run_pipeline_from_bytes(b"<Ampla></Ampla>")
@@ -65,7 +71,42 @@ def health():
         return {"status": "error", "pipeline": "failed"}
 
 
-@app.post("/convert/json", response_model=ModelResponse, tags=["convert"])
+@app.get(
+    "/info",
+    tags=["system"],
+    summary="API and pipeline version info",
+    operation_id="info",
+)
+def info():
+    return {
+        "api_version": app.version,
+        "pipeline_version": "1.0.0",
+        "commit": "unknown",
+    }
+
+
+@app.post(
+    "/convert/json",
+    response_model=ModelResponse,
+    tags=["convert"],
+    summary="Convert Ampla XML to JSON model",
+    operation_id="convert_json",
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                "multipart/form-data": {
+                    "schema": {"type": "object"},
+                    "example": {
+                        "file": {
+                            "filename": "project.xml",
+                            "content": "<Ampla>...</Ampla>",
+                        }
+                    },
+                }
+            }
+        }
+    },
+)
 async def convert_json(file: UploadFile, request: Request):
     model = await load_model(file, request, "/convert/json")
     return model_to_json(model)
@@ -74,6 +115,8 @@ async def convert_json(file: UploadFile, request: Request):
 @app.post(
     "/convert/xml",
     tags=["convert"],
+    summary="Convert Ampla XML to B2MML XML",
+    operation_id="convert_xml",
     responses={200: {"content": {"application/xml": {}}}},
 )
 async def convert_xml(file: UploadFile, request: Request):
@@ -82,7 +125,13 @@ async def convert_xml(file: UploadFile, request: Request):
     return Response(content=xml, media_type="application/xml")
 
 
-@app.post("/diff/json", response_model=DiffResponse, tags=["diff"])
+@app.post(
+    "/diff/json",
+    response_model=DiffResponse,
+    tags=["diff"],
+    summary="Compute JSON diff between two Ampla XML models",
+    operation_id="diff_json",
+)
 async def diff_json(file_a: UploadFile, file_b: UploadFile, request: Request):
     model_a = await load_model(file_a, request, "/diff/json")
     model_b = await load_model(file_b, request, "/diff/json")
@@ -91,7 +140,13 @@ async def diff_json(file_a: UploadFile, file_b: UploadFile, request: Request):
     return result.to_dict()
 
 
-@app.post("/diff/text", tags=["diff"], responses={200: {"content": {"text/plain": {}}}})
+@app.post(
+    "/diff/text",
+    tags=["diff"],
+    summary="Compute text diff between two Ampla XML models",
+    operation_id="diff_text",
+    responses={200: {"content": {"text/plain": {}}}},
+)
 async def diff_text(file_a: UploadFile, file_b: UploadFile, request: Request):
     model_a = await load_model(file_a, request, "/diff/text")
     model_b = await load_model(file_b, request, "/diff/text")
@@ -100,7 +155,12 @@ async def diff_text(file_a: UploadFile, file_b: UploadFile, request: Request):
     return Response(content=result.to_text(), media_type="text/plain")
 
 
-@app.post("/convert/excel", tags=["convert"])
+@app.post(
+    "/convert/excel",
+    tags=["convert"],
+    summary="Convert Ampla XML to Excel workbook",
+    operation_id="convert_excel",
+)
 async def convert_excel(file: UploadFile, request: Request):
     model = await load_model(file, request, "/convert/excel")
     data = export_to_excel(model)
@@ -111,27 +171,48 @@ async def convert_excel(file: UploadFile, request: Request):
     )
 
 
-@app.post("/convert/csv/equipment", tags=["convert"])
+@app.post(
+    "/convert/csv/equipment",
+    tags=["convert"],
+    summary="Export equipment list as CSV",
+    operation_id="convert_csv_equipment",
+)
 async def convert_csv_equipment(file: UploadFile, request: Request):
     model = await load_model(file, request, "/convert/csv/equipment")
     data = export_equipment_csv(model)
     return binary_response(data, "equipment.csv", "text/csv")
 
 
-@app.post("/convert/csv/classes", tags=["convert"])
+@app.post(
+    "/convert/csv/classes",
+    tags=["convert"],
+    summary="Export class list as CSV",
+    operation_id="convert_csv_classes",
+)
 async def convert_csv_classes(file: UploadFile, request: Request):
     model = await load_model(file, request, "/convert/csv/classes")
     data = export_classes_csv(model)
     return binary_response(data, "classes.csv", "text/csv")
 
 
-@app.post("/stats", response_model=StatsResponse, tags=["stats"])
+@app.post(
+    "/stats",
+    response_model=StatsResponse,
+    tags=["stats"],
+    summary="Compute statistics for an Ampla XML model",
+    operation_id="stats",
+)
 async def stats(file: UploadFile, request: Request):
     model = await load_model(file, request, "/stats")
     return compute_stats(model).to_dict()
 
 
-@app.post("/convert/html", tags=["convert"])
+@app.post(
+    "/convert/html",
+    tags=["convert"],
+    summary="Generate HTML equipment report",
+    operation_id="convert_html",
+)
 async def convert_html(file: UploadFile, request: Request):
     model = await load_model(file, request, "/convert/html")
     html = export_to_html(model)
