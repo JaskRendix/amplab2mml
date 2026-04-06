@@ -122,6 +122,7 @@ uvicorn app.api:app --reload
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Health check |
+| GET | `/info` | API and pipeline version info |
 | POST | `/convert/json` | Receive JSON model |
 | POST | `/convert/xml` | Receive B2MML XML |
 | POST | `/convert/excel` | Receive Excel workbook |
