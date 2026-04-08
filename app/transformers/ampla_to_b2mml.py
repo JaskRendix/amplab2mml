@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 
 import tomllib
+from lxml import etree
 
 from app.models.classes import EquipmentClass
 from app.models.equipment import Equipment
@@ -18,7 +19,6 @@ class TransformationContext:
         self.level_map = level_map
         self.class_id_lookup: dict[str, str] = {}
         self.warnings: list[str] = []
-        self.stats: dict[str, int] = {}
 
 
 class AmplaTransformer:
@@ -49,7 +49,7 @@ class AmplaTransformer:
             logger.error(f"Error loading config: {e}. Using defaults.")
             return default_map
 
-    def transform(self, root: Any) -> dict[str, Any]:
+    def transform(self, root: etree._Element) -> dict[str, Any]:
         """Runs the full multi-pass transformation pipeline."""
         ctx = TransformationContext(self.level_map)
 
@@ -76,7 +76,7 @@ class AmplaTransformer:
             "warnings": ctx.warnings,
         }
 
-    def _parse_classes(self, root: Any) -> list[EquipmentClass]:
+    def _parse_classes(self, root: etree._Element) -> list[EquipmentClass]:
         """Extracts all class definitions from the XML."""
         classes: list[EquipmentClass] = []
         for container in root.xpath("/Ampla/ClassDefinitions/ClassDefinition"):
@@ -86,7 +86,9 @@ class AmplaTransformer:
                 classes.extend(self._extract_classes(node, None))
         return classes
 
-    def _extract_classes(self, node: Any, parent: str | None) -> list[EquipmentClass]:
+    def _extract_classes(
+        self, node: etree._Element, parent: str | None
+    ) -> list[EquipmentClass]:
         """Recursively builds EquipmentClass objects."""
         name = node.get("name")
         full_name = f"{parent}.{name}" if parent else name
@@ -109,7 +111,7 @@ class AmplaTransformer:
 
         return result
 
-    def _build_class_id_lookup(self, root: Any) -> dict[str, str]:
+    def _build_class_id_lookup(self, root: etree._Element) -> dict[str, str]:
         """Maps ClassDefinition @id → dotted class name."""
         lookup: dict[str, str] = {}
 
@@ -141,7 +143,7 @@ class AmplaTransformer:
             cls.inheritance_chain = chain[::-1]
 
     def _parse_equipment(
-        self, root: Any, ctx: TransformationContext
+        self, root: etree._Element, ctx: TransformationContext
     ) -> list[Equipment]:
         """Extracts all equipment items and resolves their class IDs."""
         return [
@@ -150,7 +152,9 @@ class AmplaTransformer:
             if (eq := self._convert_item(item, ctx))
         ]
 
-    def _convert_item(self, node: Any, ctx: TransformationContext) -> Equipment | None:
+    def _convert_item(
+        self, node: etree._Element, ctx: TransformationContext
+    ) -> Equipment | None:
         """Converts an <Item> XML node into an Equipment model."""
         try:
             item_type = node.get("type", "Unknown")
@@ -176,13 +180,15 @@ class AmplaTransformer:
             logger.error(f"Faulty item detected at ID {node.get('id')}: {e}")
             return None
 
-    def _resolve_class_id(self, cid: Any, ctx: TransformationContext):
+    def _resolve_class_id(self, cid: str, ctx: TransformationContext) -> str:
         name = ctx.class_id_lookup.get(cid)
         if not name:
             ctx.warnings.append(f"Unknown class ID '{cid}'")
         return name or cid
 
-    def _compute_full_names(self, equipment_list: list[Equipment], parent: str | None):
+    def _compute_full_names(
+        self, equipment_list: list[Equipment], parent: str | None
+    ) -> None:
         """Computes dotted full names for all equipment nodes."""
         for eq in equipment_list:
             eq.full_name = (
@@ -194,7 +200,7 @@ class AmplaTransformer:
 
     def _merge_properties(
         self, equipment: list[Equipment], classes: list[EquipmentClass]
-    ):
+    ) -> None:
         """Merges inherited class properties with equipment overrides."""
         class_lookup = {cls.name: cls for cls in classes}
 
