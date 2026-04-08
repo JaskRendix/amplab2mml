@@ -1,17 +1,10 @@
 import subprocess
 
 from fastapi.testclient import TestClient
-from lxml import etree
 
 from app.api import app
 from app.html_report import export_to_html
 from app.models.equipment import Equipment
-from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
-
-
-def make_model(xml: str) -> dict:
-    return transform_ampla_to_b2mml(etree.fromstring(xml.encode()))
-
 
 XML = """
 <Ampla>
@@ -33,41 +26,41 @@ XML = """
 """
 
 
-def test_returns_string():
+def test_returns_string(make_model):
     model = make_model(XML)
     result = export_to_html(model)
     assert isinstance(result, str)
     assert len(result) > 0
 
 
-def test_is_valid_html():
+def test_is_valid_html(make_model):
     model = make_model(XML)
     result = export_to_html(model)
     assert "<!DOCTYPE html>" in result
     assert "</html>" in result
 
 
-def test_contains_equipment_names():
+def test_contains_equipment_names(make_model):
     model = make_model(XML)
     result = export_to_html(model)
     assert "Mine" in result
     assert "Plant" in result
 
 
-def test_contains_class_names():
+def test_contains_class_names(make_model):
     model = make_model(XML)
     result = export_to_html(model)
     assert "Crusher" in result
 
 
-def test_contains_property_values():
+def test_contains_property_values(make_model):
     model = make_model(XML)
     result = export_to_html(model)
     assert "Electric" in result
     assert "ACME" in result
 
 
-def test_contains_stats():
+def test_contains_stats(make_model):
     model = make_model(XML)
     result = export_to_html(model)
     assert "equipment nodes" in result
@@ -75,7 +68,7 @@ def test_contains_stats():
     assert "max depth" in result
 
 
-def test_warnings_section_absent_when_no_warnings():
+def test_warnings_section_absent_when_no_warnings(make_model):
     model = make_model(XML)
     result = export_to_html(model)
     assert "Warnings" not in result

@@ -1,8 +1,8 @@
 # Ampla to B2MML Transformer
 
-This project converts an Ampla Project XML export into an ISA‑95 B2MML Equipment model.
-It replaces the original XSLT‑only approach with a Python implementation that provides
-a command‑line interface, a FastAPI service, and multiple output formats.
+This project converts an Ampla Project XML export into an ISA-95 B2MML Equipment model.
+It replaces the original XSLT-only approach with a Python implementation that provides
+a command-line interface, a FastAPI service, and multiple output formats.
 
 ---
 
@@ -59,7 +59,7 @@ pip install -r requirements.txt
 
 ---
 
-## Command‑line usage
+## Command-line usage
 
 ### Convert Ampla XML to B2MML XML
 ```
@@ -148,7 +148,7 @@ curl -X POST -F "file_a=@baseline.xml" -F "file_b=@updated.xml" http://localhost
 
 ## Docker Compose (local development)
 
-The project includes a Docker Compose setup for running the API with hot‑reload and without needing to rebuild the image on every change.
+The project includes a Docker Compose setup for running the API with hot-reload and without needing to rebuild the image on every change.
 
 ### Start the API
 ```
@@ -188,7 +188,7 @@ make down
 
 ## License
 
-This project is licensed under the BSD 3‑Clause License.
-It includes third‑party material derived from the original
+This project is licensed under the BSD 3-Clause License.
+It includes third-party material derived from the original
 `Ampla_to_Equipment_B2MML.xslt` by Oleg Tkachenko (2005),
-also under the BSD 3‑Clause License.
+also under the BSD 3-Clause License.

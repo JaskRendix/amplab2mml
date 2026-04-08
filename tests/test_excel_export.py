@@ -8,13 +8,6 @@ from openpyxl import load_workbook
 
 from app.api import app
 from app.excel_export import export_to_excel
-from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
-
-
-def make_model(xml: str) -> dict:
-    root = etree.fromstring(xml.encode())
-    return transform_ampla_to_b2mml(root)
-
 
 XML = """
 <Ampla>
@@ -37,7 +30,7 @@ XML = """
 
 
 @pytest.fixture
-def workbook():
+def workbook(make_model):
     model = make_model(XML)
     data = export_to_excel(model)
     return load_workbook(BytesIO(data))
@@ -105,7 +98,7 @@ def test_classes_property_value(workbook):
     assert crusher_row[mfr_col] == "ACME"
 
 
-def test_returns_bytes():
+def test_returns_bytes(make_model):
     model = make_model(XML)
     result = export_to_excel(model)
     assert isinstance(result, bytes)

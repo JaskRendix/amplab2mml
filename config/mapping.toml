@@ -1,0 +1,18 @@
+# Ampla → B2MML Mapping Configuration
+# -----------------------------------
+# Maps Ampla internal folder types to ISA‑95 EquipmentElementLevel values.
+# This file allows integrators to adjust behaviour without modifying code.
+
+[level_map]
+
+# Core ISA‑95 hierarchy
+"Citect.Ampla.Isa95.EnterpriseFolder" = "Enterprise"
+"Citect.Ampla.Isa95.SiteFolder"       = "Site"
+"Citect.Ampla.Isa95.AreaFolder"       = "Area"
+
+# Generic fallback for non‑ISA‑95 folders
+"Citect.Ampla.General.Server.ApplicationsFolder" = "Other"
+
+# Future‑proofing: Add new mappings here as needed
+# Example:
+# "Citect.Ampla.Isa95.WorkCenterFolder" = "WorkCenter"

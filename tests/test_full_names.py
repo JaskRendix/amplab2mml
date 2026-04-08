@@ -1,9 +1,4 @@
-from lxml import etree
-
-from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
-
-
-def test_full_name_generation_nested():
+def test_full_name_generation_nested(make_model):
     xml = """
     <Ampla>
       <Item id="1" name="Mine" type="Citect.Ampla.Isa95.EnterpriseFolder">
@@ -13,8 +8,8 @@ def test_full_name_generation_nested():
       </Item>
     </Ampla>
     """
-    root = etree.fromstring(xml)
-    model = transform_ampla_to_b2mml(root)
+
+    model = make_model(xml)
 
     mine = model["equipment"][0]
     plant = mine.children[0]

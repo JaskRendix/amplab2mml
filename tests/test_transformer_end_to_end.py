@@ -1,9 +1,4 @@
-from lxml import etree
-
-from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
-
-
-def test_end_to_end_transformer():
+def test_end_to_end_transformer(make_model):
     xml = """
     <Ampla>
       <Item id="1" name="Mine" type="Citect.Ampla.Isa95.EnterpriseFolder">
@@ -18,9 +13,7 @@ def test_end_to_end_transformer():
     </Ampla>
     """
 
-    root = etree.fromstring(xml)
-    model = transform_ampla_to_b2mml(root)
-
+    model = make_model(xml)
     eq = model["equipment"][0]
 
     assert eq.full_name == "Mine"
@@ -28,3 +21,17 @@ def test_end_to_end_transformer():
     assert len(eq.properties) == 1
     assert eq.properties[0].name == "PropA"
     assert eq.properties[0].value == "ValueA"
+
+
+def test_transformer_returns_warnings(make_model):
+    xml = """
+    <Ampla>
+      <Item id="1" name="Mine" type="Citect.Ampla.Isa95.EnterpriseFolder">
+        <ItemClassAssociation classDefinitionId="999"/>
+      </Item>
+    </Ampla>
+    """
+    model = make_model(xml)
+    assert "warnings" in model
+    assert isinstance(model["warnings"], list)
+    assert model["warnings"]

@@ -1,16 +1,9 @@
-from lxml import etree
-
 from app.models.classes import EquipmentClass
 from app.models.equipment import Equipment
-from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
 from app.validators import validate_model
 
 
-def parse(xml: str):
-    return etree.fromstring(xml.encode())
-
-
-def test_no_warnings_on_valid_model():
+def test_no_warnings_on_valid_model(make_model):
     xml = """
     <Ampla>
       <Item id="1" name="Mine" type="Citect.Ampla.Isa95.EnterpriseFolder">
@@ -23,7 +16,7 @@ def test_no_warnings_on_valid_model():
       </ClassDefinitions>
     </Ampla>
     """
-    model = transform_ampla_to_b2mml(parse(xml))
+    model = make_model(xml)
     assert validate_model(model) == []
 
 
@@ -46,6 +39,7 @@ def test_unknown_class_reference():
 def test_unknown_parent_class():
     cls = EquipmentClass(name="Child", parent="NonExistent", properties=[])
     model = {"equipment": [], "classes": [cls], "warnings": []}
+
     warnings = validate_model(model)
     assert any("unknown parent" in w for w in warnings)
     assert any("NonExistent" in w for w in warnings)
@@ -55,6 +49,7 @@ def test_circular_inheritance():
     a = EquipmentClass(name="A", parent="B", properties=[])
     b = EquipmentClass(name="B", parent="A", properties=[])
     model = {"equipment": [], "classes": [a, b], "warnings": []}
+
     warnings = validate_model(model)
     assert any("circular" in w for w in warnings)
 
@@ -78,3 +73,17 @@ def test_warnings_in_pipeline():
     assert "warnings" in model
     assert isinstance(model["warnings"], list)
     assert model["warnings"] == []
+
+
+def test_transformer_unknown_class_warning(make_model):
+    xml = """
+    <Ampla>
+      <Item id="1" name="X" type="Citect.Ampla.Isa95.EnterpriseFolder">
+        <ItemClassAssociation classDefinitionId="999"/>
+      </Item>
+    </Ampla>
+    """
+    model = make_model(xml)
+    assert "warnings" in model
+    assert len(model["warnings"]) == 1
+    assert "999" in model["warnings"][0]

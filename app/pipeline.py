@@ -2,7 +2,7 @@ import logging
 
 from lxml import etree
 
-from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
+from app.transformers.ampla_to_b2mml import AmplaTransformer
 from app.validators import validate_model
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,8 @@ def load_xml_from_file(path: str):
 
 
 def run_pipeline_from_root(root):
-    model = transform_ampla_to_b2mml(root)
+    transformer = AmplaTransformer(config_path="config/mapping.toml")
+    model = transformer.transform(root)
     warnings = validate_model(model)
     for w in warnings:
         logger.warning(w)

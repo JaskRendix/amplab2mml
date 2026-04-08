@@ -1,12 +1,4 @@
-from lxml import etree
-
 from app.stats import compute_stats
-from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
-
-
-def make_model(xml: str) -> dict:
-    return transform_ampla_to_b2mml(etree.fromstring(xml.encode()))
-
 
 XML = """
 <Ampla>
@@ -30,28 +22,28 @@ XML = """
 """
 
 
-def test_total_equipment():
+def test_total_equipment(make_model):
     stats = compute_stats(make_model(XML))
     assert stats.total_equipment == 3
 
 
-def test_total_classes():
+def test_total_classes(make_model):
     stats = compute_stats(make_model(XML))
     assert stats.total_classes == 1  # only Crusher (container skipped)
 
 
-def test_total_properties():
+def test_total_properties(make_model):
     # Area has DriveType and Manufacturer from class
     stats = compute_stats(make_model(XML))
     assert stats.total_properties == 2
 
 
-def test_max_depth():
+def test_max_depth(make_model):
     stats = compute_stats(make_model(XML))
     assert stats.max_depth == 3
 
 
-def test_no_warnings():
+def test_no_warnings(make_model):
     stats = compute_stats(make_model(XML))
     assert stats.warnings == []
 
@@ -74,7 +66,7 @@ def test_warnings_included():
     assert isinstance(stats.warnings, list)
 
 
-def test_to_dict():
+def test_to_dict(make_model):
     stats = compute_stats(make_model(XML))
     d = stats.to_dict()
     assert "total_equipment" in d
@@ -84,7 +76,7 @@ def test_to_dict():
     assert "warnings" in d
 
 
-def test_to_text():
+def test_to_text(make_model):
     stats = compute_stats(make_model(XML))
     text = stats.to_text()
     assert "Equipment nodes" in text

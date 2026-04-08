@@ -1,4 +1,7 @@
 import pytest
+from lxml import etree
+
+from app.transformers.ampla_to_b2mml import AmplaTransformer
 
 
 @pytest.fixture
@@ -16,3 +19,20 @@ def minimal_ampla_xml():
       </ClassDefinitions>
     </Ampla>
     """
+
+
+@pytest.fixture
+def transformer():
+    """Provides a default AmplaTransformer instance."""
+    return AmplaTransformer(config_path=None)
+
+
+@pytest.fixture
+def make_model(transformer):
+    """Parses XML and returns the transformed model."""
+
+    def _make(xml: str):
+        root = etree.fromstring(xml.encode("utf-8"))
+        return transformer.transform(root)
+
+    return _make

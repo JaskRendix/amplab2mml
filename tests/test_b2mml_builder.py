@@ -1,14 +1,12 @@
 from lxml import etree
 
 from app.builders.b2mml_builder import build_b2mml_xml
-from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
 
 NS = {"b2mml": "http://www.wbf.org/xml/b2mml-v0400"}
 
 
-def test_b2mml_xml_structure(minimal_ampla_xml):
-    root = etree.fromstring(minimal_ampla_xml)
-    model = transform_ampla_to_b2mml(root)
+def test_b2mml_xml_structure(make_model, minimal_ampla_xml):
+    model = make_model(minimal_ampla_xml)
     xml = build_b2mml_xml(model)
 
     doc = etree.fromstring(xml.encode())

@@ -1,11 +1,4 @@
 import pytest
-from lxml import etree
-
-from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
-
-
-def parse(xml: str):
-    return etree.fromstring(xml.encode("utf-8"))
 
 
 @pytest.mark.parametrize(
@@ -40,22 +33,24 @@ def parse(xml: str):
         ),
     ],
 )
-def test_class_naming(xml, expected_names, expected_parents):
-    model = transform_ampla_to_b2mml(parse(xml))
+def test_class_naming(make_model, xml, expected_names, expected_parents):
+    model = make_model(xml)
     classes = {cls.name: cls for cls in model["classes"]}
+
     assert set(classes) == expected_names
+
     for name, expected_parent in expected_parents.items():
         assert classes[name].parent == expected_parent
 
 
-def test_equipment_class_id_flat(minimal_ampla_xml):
+def test_equipment_class_id_flat(make_model, minimal_ampla_xml):
     """Flat class: equipment resolves to the class name directly."""
-    model = transform_ampla_to_b2mml(parse(minimal_ampla_xml))
+    model = make_model(minimal_ampla_xml)
     eq = model["equipment"][0]
     assert eq.class_ids == ["Base"]
 
 
-def test_equipment_class_id_child():
+def test_equipment_class_id_child(make_model):
     """Equipment referencing a child class ID resolves to the child name."""
     xml = """
     <Ampla>
@@ -69,7 +64,7 @@ def test_equipment_class_id_child():
       </ClassDefinitions>
     </Ampla>
     """
-    model = transform_ampla_to_b2mml(parse(xml))
+    model = make_model(xml)
     eq = model["equipment"][0]
     assert eq.class_ids == ["Child"]
 
@@ -106,8 +101,8 @@ def test_equipment_class_id_child():
         ),
     ],
 )
-def test_full_name_generation(xml, target_id, expected_full_name):
-    model = transform_ampla_to_b2mml(parse(xml))
+def test_full_name_generation(make_model, xml, target_id, expected_full_name):
+    model = make_model(xml)
 
     def find(nodes):
         for eq in nodes:
@@ -129,17 +124,17 @@ def test_full_name_generation(xml, target_id, expected_full_name):
         ("Citect.Ampla.Isa95.SiteFolder", "Site"),
         ("Citect.Ampla.Isa95.AreaFolder", "Area"),
         ("Citect.Ampla.General.Server.ApplicationsFolder", "Other"),
-        ("Citect.Ampla.Isa95.WorkCenter", "Other"),  # unmapped → Other
-        ("Citect.Ampla.Isa95.Unit", "Other"),  # unmapped → Other
+        ("Citect.Ampla.Isa95.WorkCenter", "Other"),
+        ("Citect.Ampla.Isa95.Unit", "Other"),
     ],
 )
-def test_equipment_element_level(item_type, expected_level):
+def test_equipment_element_level(make_model, item_type, expected_level):
     xml = f'<Ampla><Item id="1" name="X" type="{item_type}"/></Ampla>'
-    model = transform_ampla_to_b2mml(parse(xml))
+    model = make_model(xml)
     assert model["equipment"][0].level == expected_level
 
 
-def test_property_inheritance_and_override():
+def test_property_inheritance_and_override(make_model):
     """
     Equipment references the child class by its own @id.
     Properties from the child are inherited; Class.PropA is overridden.
@@ -160,7 +155,7 @@ def test_property_inheritance_and_override():
       </ClassDefinitions>
     </Ampla>
     """
-    model = transform_ampla_to_b2mml(parse(xml))
+    model = make_model(xml)
     eq = model["equipment"][0]
     props = {p.name: p for p in eq.properties}
 
@@ -171,7 +166,7 @@ def test_property_inheritance_and_override():
     assert [p.name for p in eq.properties] == sorted(p.name for p in eq.properties)
 
 
-def test_class_property_sorting():
+def test_class_property_sorting(make_model):
     xml = """
     <Ampla>
       <ClassDefinitions>
@@ -183,6 +178,6 @@ def test_class_property_sorting():
       </ClassDefinitions>
     </Ampla>
     """
-    model = transform_ampla_to_b2mml(parse(xml))
+    model = make_model(xml)
     cls = model["classes"][0]
     assert [p.name for p in cls.properties] == ["Alpha", "Beta", "Zeta"]

@@ -1,13 +1,4 @@
-from lxml import etree
-
 from app.diff import diff_models
-from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
-
-
-def make_model(xml: str) -> dict:
-    root = etree.fromstring(xml.encode())
-    return transform_ampla_to_b2mml(root)
-
 
 BASE_XML = """
 <Ampla>
@@ -29,14 +20,14 @@ BASE_XML = """
 """
 
 
-def test_no_diff_identical():
+def test_no_diff_identical(make_model):
     model_a = make_model(BASE_XML)
     model_b = make_model(BASE_XML)
     result = diff_models(model_a, model_b)
     assert result.is_empty()
 
 
-def test_equipment_added():
+def test_equipment_added(make_model):
     changed = BASE_XML.replace(
         "</Item>\n  <ClassDefinitions>",
         """
@@ -49,12 +40,7 @@ def test_equipment_added():
     assert result.equipment_removed == []
 
 
-def test_equipment_removed():
-    changed = BASE_XML.replace(
-        '<Item id="2" name="Plant" type="Citect.Ampla.Isa95.SiteFolder">',
-        '<Item id="2" name="Plant" type="Citect.Ampla.Isa95.SiteFolder" skip="1">',
-    )
-    # easier: just use a model without Plant
+def test_equipment_removed(make_model):
     no_plant = """
     <Ampla>
       <Item id="1" name="Mine" type="Citect.Ampla.Isa95.EnterpriseFolder"/>
@@ -72,22 +58,24 @@ def test_equipment_removed():
     assert result.equipment_added == []
 
 
-def test_property_value_changed():
+def test_property_value_changed(make_model):
     changed = BASE_XML.replace(
         '<Property name="Class.DriveType">Electric</Property>',
         '<Property name="Class.DriveType">Hydraulic</Property>',
     )
     result = diff_models(make_model(BASE_XML), make_model(changed))
     assert not result.is_empty()
+
     plant_changes = next(
         c for c in result.equipment_properties_changed if c["equipment"] == "Mine.Plant"
     )
     drive = next(p for p in plant_changes["changed"] if p["name"] == "DriveType")
+
     assert drive["old"] == "Electric"
     assert drive["new"] == "Hydraulic"
 
 
-def test_class_added():
+def test_class_added(make_model):
     extra_class = """
     <Ampla>
       <Item id="1" name="Mine" type="Citect.Ampla.Isa95.EnterpriseFolder">
@@ -111,7 +99,7 @@ def test_class_added():
     assert "Crusher.JawCrusher" in result.classes_added
 
 
-def test_class_removed():
+def test_class_removed(make_model):
     no_crusher = """
     <Ampla>
       <Item id="1" name="Mine" type="Citect.Ampla.Isa95.EnterpriseFolder"/>
@@ -124,7 +112,7 @@ def test_class_removed():
     assert "Crusher" in result.classes_removed
 
 
-def test_diff_text_output():
+def test_diff_text_output(make_model):
     no_plant = """
     <Ampla>
       <Item id="1" name="Mine" type="Citect.Ampla.Isa95.EnterpriseFolder"/>
@@ -143,13 +131,13 @@ def test_diff_text_output():
     assert text.startswith("-")
 
 
-def test_diff_empty_text():
+def test_diff_empty_text(make_model):
     model = make_model(BASE_XML)
     result = diff_models(model, model)
     assert result.to_text() == "No differences found."
 
 
-def test_api_diff_json(tmp_path):
+def test_api_diff_json():
     from fastapi.testclient import TestClient
 
     from app.api import app
@@ -170,7 +158,7 @@ def test_api_diff_json(tmp_path):
     assert data["equipment_removed"] == []
 
 
-def test_api_diff_text(tmp_path):
+def test_api_diff_text():
     from fastapi.testclient import TestClient
 
     from app.api import app

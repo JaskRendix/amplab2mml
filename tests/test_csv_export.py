@@ -1,15 +1,7 @@
 import csv
 from io import StringIO
 
-from lxml import etree
-
 from app.csv_export import export_classes_csv, export_equipment_csv
-from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
-
-
-def make_model(xml: str) -> dict:
-    return transform_ampla_to_b2mml(etree.fromstring(xml.encode()))
-
 
 XML = """
 <Ampla>
@@ -35,7 +27,7 @@ def parse_csv(text: str) -> list[dict]:
     return list(csv.DictReader(StringIO(text)))
 
 
-def test_equipment_csv_headers():
+def test_equipment_csv_headers(make_model):
     rows = parse_csv(export_equipment_csv(make_model(XML)))
     assert "full_name" in rows[0]
     assert "level" in rows[0]
@@ -44,45 +36,45 @@ def test_equipment_csv_headers():
     assert "Manufacturer" in rows[0]
 
 
-def test_equipment_csv_rows():
+def test_equipment_csv_rows(make_model):
     rows = parse_csv(export_equipment_csv(make_model(XML)))
     names = [r["full_name"] for r in rows]
     assert "Mine" in names
     assert "Mine.Plant" in names
 
 
-def test_equipment_csv_property_value():
+def test_equipment_csv_property_value(make_model):
     rows = parse_csv(export_equipment_csv(make_model(XML)))
     plant = next(r for r in rows if r["full_name"] == "Mine.Plant")
     assert plant["DriveType"] == "Electric"
 
 
-def test_equipment_csv_class_ids():
+def test_equipment_csv_class_ids(make_model):
     rows = parse_csv(export_equipment_csv(make_model(XML)))
     plant = next(r for r in rows if r["full_name"] == "Mine.Plant")
     assert "Crusher" in plant["class_ids"]
 
 
-def test_classes_csv_headers():
+def test_classes_csv_headers(make_model):
     rows = parse_csv(export_classes_csv(make_model(XML)))
     assert "name" in rows[0]
     assert "parent" in rows[0]
     assert "DriveType" in rows[0]
 
 
-def test_classes_csv_rows():
+def test_classes_csv_rows(make_model):
     rows = parse_csv(export_classes_csv(make_model(XML)))
     names = [r["name"] for r in rows]
     assert "Crusher" in names
 
 
-def test_classes_csv_property_value():
+def test_classes_csv_property_value(make_model):
     rows = parse_csv(export_classes_csv(make_model(XML)))
     crusher = next(r for r in rows if r["name"] == "Crusher")
     assert crusher["Manufacturer"] == "ACME"
 
 
-def test_returns_string():
+def test_returns_string(make_model):
     model = make_model(XML)
     assert isinstance(export_equipment_csv(model), str)
     assert isinstance(export_classes_csv(model), str)

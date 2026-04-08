@@ -1,7 +1,4 @@
 import pytest
-from lxml import etree
-
-from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
 
 
 @pytest.mark.parametrize(
@@ -11,7 +8,7 @@ from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
         (None, "Default"),  # no override → inherited value
     ],
 )
-def test_property_merging(override_value, expected):
+def test_property_merging(make_model, override_value, expected):
     override_xml = (
         f"<Property name='Class.PropA'>{override_value}</Property>"
         if override_value is not None
@@ -33,9 +30,7 @@ def test_property_merging(override_value, expected):
     </Ampla>
     """
 
-    root = etree.fromstring(xml)
-    model = transform_ampla_to_b2mml(root)
-
+    model = make_model(xml)
     eq = model["equipment"][0]
     props = {p.name: p.value for p in eq.properties}
 

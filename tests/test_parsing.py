@@ -1,7 +1,4 @@
 import pytest
-from lxml import etree
-
-from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
 
 
 @pytest.mark.parametrize(
@@ -27,11 +24,34 @@ from app.transformers.ampla_to_b2mml import transform_ampla_to_b2mml
         ),
     ],
 )
-def test_basic_parsing(xml, expected_name, expected_level):
-    root = etree.fromstring(xml)
-    model = transform_ampla_to_b2mml(root)
+def test_basic_parsing(make_model, xml, expected_name, expected_level):
+    model = make_model(xml)
 
     eq = model["equipment"][0]
     assert eq.name == expected_name
     assert eq.level == expected_level
     assert eq.children == []
+
+
+def test_class_property_datatype_translation(make_model):
+    xml = """
+    <Ampla>
+      <ClassDefinitions>
+        <ClassDefinition id="10" name="Base">
+          <PropertyDefinition name="A" type="System.String">x</PropertyDefinition>
+          <PropertyDefinition name="B" type="System.Int32">1</PropertyDefinition>
+        </ClassDefinition>
+      </ClassDefinitions>
+    </Ampla>
+    """
+    model = make_model(xml)
+    props = {p.name: p.datatype for p in model["classes"][0].properties}
+    assert props["A"] == "string"
+    assert props["B"] == "int"
+
+
+def test_empty_ampla_document(make_model):
+    xml = "<Ampla></Ampla>"
+    model = make_model(xml)
+    assert model["equipment"] == []
+    assert model["classes"] == []
