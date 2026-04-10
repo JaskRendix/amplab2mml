@@ -59,6 +59,80 @@ This reproduces the behaviour of the original XSLT while adding validation, conf
 
 ---
 
+## Data Model Overview
+
+
+The transformer produces a clean, normalized internal representation of the Ampla project.  
+This model is independent of any output format (XML, JSON, Excel) and is used by all builders.
+
+### UML Model
+
+```mermaid
+classDiagram
+    class Equipment {
+        +String id
+        +String name
+        +String level
+        +List class_ids
+        +List children
+        +Dict overrides
+        +List properties
+        +String full_name
+    }
+
+    class EquipmentClass {
+        +String name
+        +String parent
+        +List properties
+        +List inheritance_chain
+    }
+
+    class ClassProperty {
+        +String name
+        +String value
+        +String datatype
+    }
+
+    class EquipmentProperty {
+        +String name
+        +String value
+        +String datatype
+    }
+
+    Equipment "1" *-- "many" Equipment : children
+    Equipment "1" *-- "many" EquipmentProperty : properties
+    EquipmentClass "1" *-- "many" ClassProperty : properties
+    Equipment ..> EquipmentClass : resolves attributes from
+```
+
+### Transformation Pipeline (Sequence)
+
+```mermaid
+sequenceDiagram
+    participant XML as Raw XML
+    participant AT as AmplaTransformer
+    participant CTX as Context (Shared State)
+    participant Model as Internal Model
+
+    AT->>XML: Pass 1: Build ID Lookup Table
+    AT->>XML: Pass 2: Extract Classes & Compute Inheritance
+    AT->>XML: Pass 3: Recursive Equipment Tree Parsing
+    AT->>CTX: Resolve Class IDs & Log Warnings
+    AT->>Model: Pass 4: Merge Properties & Apply Overrides
+    Note right of Model: Final deterministic B2MML-ready model
+```
+
+### Design Principles
+
+- **Deterministic output** — same XML → same model every time  
+- **Multi-pass resolution** — ensures class inheritance and overrides are fully resolved  
+- **Separation of concerns** — parsing, transformation, and output builders are isolated  
+- **Extensible** — new output formats can be added without touching the transformer  
+- **Safe** — warnings collected instead of throwing on malformed XML  
+```
+
+---
+
 ## **Configuration (mapping.toml)**
 
 Level mapping is now externalized in:
