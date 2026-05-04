@@ -181,3 +181,55 @@ def test_cli_html(tmp_path):
     content = output_file.read_text()
     assert "<!DOCTYPE html>" in content
     assert "AcmeMining" in content
+
+
+def test_cli_validate_ok():
+    input_file = "tests/data/sample_ampla.xml"
+
+    result = subprocess.run(
+        ["b2mml", "validate", input_file],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Model validation OK" in result.stdout
+
+
+def test_cli_validate_with_warnings(tmp_path):
+    invalid_xml = tmp_path / "invalid.xml"
+    invalid_xml.write_text(
+        """
+        <Ampla>
+        <Item id="1" name="Root" type="Citect.Ampla.Isa95.EnterpriseFolder">
+            <ItemClassAssociation classDefinitionId="does-not-exist" />
+        </Item>
+        </Ampla>
+        """
+    )
+
+    result = subprocess.run(
+        ["b2mml", "validate", str(invalid_xml)],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 1
+    assert "Model validation FAILED" in result.stdout
+    assert "unknown class" in result.stdout.lower()
+
+
+def test_cli_validate_json():
+    input_file = "tests/data/sample_ampla.xml"
+
+    result = subprocess.run(
+        ["b2mml", "validate", "--format", "json", input_file],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    data = json.loads(result.stdout)
+    assert "warnings" in data
+    assert "valid" in data
+    assert data["valid"] is True

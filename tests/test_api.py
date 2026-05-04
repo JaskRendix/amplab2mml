@@ -435,3 +435,53 @@ def test_info():
     assert "api_version" in data
     assert "pipeline_version" in data
     assert "commit" in data
+
+
+def test_validate_ok():
+    xml = open("tests/data/sample_ampla.xml").read()
+
+    response = client.post(
+        "/validate",
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert "warnings" in data
+    assert isinstance(data["warnings"], list)
+    assert data["valid"] is True
+
+
+def test_validate_invalid_xml():
+    response = client.post(
+        "/validate",
+        files={"file": ("bad.xml", "<not-xml>", "application/xml")},
+    )
+
+    assert response.status_code in (400, 422)
+
+
+def test_validate_with_warnings(tmp_path):
+    invalid_xml = tmp_path / "invalid.xml"
+    invalid_xml.write_text(
+        """
+        <Ampla>
+        <Item id="1" name="Root" type="Citect.Ampla.Isa95.EnterpriseFolder">
+            <ItemClassAssociation classDefinitionId="does-not-exist" />
+        </Item>
+        </Ampla>
+        """
+    )
+
+    response = client.post(
+        "/validate",
+        files={"file": ("invalid.xml", invalid_xml.read_text(), "application/xml")},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert "warnings" in data
+    assert len(data["warnings"]) > 0
+    assert data["valid"] is False

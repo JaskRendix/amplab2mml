@@ -1,4 +1,5 @@
 from importlib.metadata import version
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
@@ -18,6 +19,7 @@ from app.logging_setup import (
 from app.pipeline import InvalidXML, run_pipeline_from_bytes
 from app.schemas import DiffResponse, HealthResponse, ModelResponse, StatsResponse
 from app.stats import compute_stats
+from app.validators import validate_model
 
 PIPELINE_VERSION = version("amplab2mml")
 
@@ -32,7 +34,9 @@ app.middleware("http")(request_id_middleware)
 app.middleware("http")(request_logging_middleware)
 
 
-async def load_model(file: UploadFile, request: Request, endpoint: str):
+async def load_model(
+    file: UploadFile, request: Request, endpoint: str
+) -> dict[str, Any]:
     if file is None:
         raise HTTPException(status_code=400, detail="Missing file upload")
 
@@ -43,7 +47,7 @@ async def load_model(file: UploadFile, request: Request, endpoint: str):
         raise HTTPException(status_code=400, detail="Invalid XML")
 
 
-def binary_response(data: bytes, filename: str, media_type: str):
+def binary_response(data: bytes, filename: str, media_type: str) -> Response:
     return Response(
         content=data,
         media_type=media_type,
@@ -52,7 +56,7 @@ def binary_response(data: bytes, filename: str, media_type: str):
 
 
 @app.exception_handler(Exception)
-async def unhandled_exception_handler(request: Request, exc: Exception):
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.exception(f"Unhandled error: {exc}")
     return JSONResponse(
         status_code=500,
@@ -67,7 +71,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     summary="Health check",
     operation_id="health",
 )
-def health():
+def health() -> dict[str, str]:
     try:
         run_pipeline_from_bytes(b"<Ampla></Ampla>")
         return {"status": "ok", "pipeline": "ready"}
@@ -82,7 +86,7 @@ def health():
     summary="API and pipeline version info",
     operation_id="info",
 )
-def info():
+def info() -> dict[str, str]:
     return {
         "api_version": app.version,
         "pipeline_version": PIPELINE_VERSION,
@@ -112,7 +116,7 @@ def info():
         }
     },
 )
-async def convert_json(file: UploadFile, request: Request):
+async def convert_json(file: UploadFile, request: Request) -> dict[str, Any]:
     model = await load_model(file, request, "/convert/json")
     return model_to_json(model)
 
@@ -124,7 +128,7 @@ async def convert_json(file: UploadFile, request: Request):
     operation_id="convert_xml",
     responses={200: {"content": {"application/xml": {}}}},
 )
-async def convert_xml(file: UploadFile, request: Request):
+async def convert_xml(file: UploadFile, request: Request) -> Response:
     model = await load_model(file, request, "/convert/xml")
     xml = build_b2mml_xml(model)
     return Response(content=xml, media_type="application/xml")
@@ -152,7 +156,9 @@ async def diff_json(file_a: UploadFile, file_b: UploadFile, request: Request):
     operation_id="diff_text",
     responses={200: {"content": {"text/plain": {}}}},
 )
-async def diff_text(file_a: UploadFile, file_b: UploadFile, request: Request):
+async def diff_text(
+    file_a: UploadFile, file_b: UploadFile, request: Request
+) -> Response:
     model_a = await load_model(file_a, request, "/diff/text")
     model_b = await load_model(file_b, request, "/diff/text")
 
@@ -166,7 +172,7 @@ async def diff_text(file_a: UploadFile, file_b: UploadFile, request: Request):
     summary="Convert Ampla XML to Excel workbook",
     operation_id="convert_excel",
 )
-async def convert_excel(file: UploadFile, request: Request):
+async def convert_excel(file: UploadFile, request: Request) -> Response:
     model = await load_model(file, request, "/convert/excel")
     data = export_to_excel(model)
     return binary_response(
@@ -182,7 +188,7 @@ async def convert_excel(file: UploadFile, request: Request):
     summary="Export equipment list as CSV",
     operation_id="convert_csv_equipment",
 )
-async def convert_csv_equipment(file: UploadFile, request: Request):
+async def convert_csv_equipment(file: UploadFile, request: Request) -> Response:
     model = await load_model(file, request, "/convert/csv/equipment")
     data = export_equipment_csv(model)
     return binary_response(data, "equipment.csv", "text/csv")
@@ -194,7 +200,7 @@ async def convert_csv_equipment(file: UploadFile, request: Request):
     summary="Export class list as CSV",
     operation_id="convert_csv_classes",
 )
-async def convert_csv_classes(file: UploadFile, request: Request):
+async def convert_csv_classes(file: UploadFile, request: Request) -> Response:
     model = await load_model(file, request, "/convert/csv/classes")
     data = export_classes_csv(model)
     return binary_response(data, "classes.csv", "text/csv")
@@ -218,7 +224,19 @@ async def stats(file: UploadFile, request: Request):
     summary="Generate HTML equipment report",
     operation_id="convert_html",
 )
-async def convert_html(file: UploadFile, request: Request):
+async def convert_html(file: UploadFile, request: Request) -> Response:
     model = await load_model(file, request, "/convert/html")
     html = export_to_html(model)
     return Response(content=html, media_type="text/html; charset=utf-8")
+
+
+@app.post(
+    "/validate",
+    tags=["validate"],
+    summary="Validate Ampla XML and internal model",
+    operation_id="validate",
+)
+async def validate(file: UploadFile, request: Request) -> dict[str, Any]:
+    model = await load_model(file, request, "/validate")
+    warnings = validate_model(model)
+    return {"warnings": warnings, "valid": len(warnings) == 0}

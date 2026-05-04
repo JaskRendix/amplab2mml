@@ -3,6 +3,7 @@ import json
 import logging
 import sys
 from importlib.metadata import version
+from typing import Any
 
 from app.builders.b2mml_builder import build_b2mml_xml
 from app.diff import diff_models
@@ -10,6 +11,7 @@ from app.excel_export import export_to_excel
 from app.html_report import export_to_html
 from app.pipeline import InvalidXML, run_pipeline_from_file
 from app.stats import compute_stats
+from app.validators import validate_model
 
 CLI_VERSION = version("amplab2mml")
 
@@ -17,8 +19,8 @@ logging.basicConfig(level=logging.ERROR, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def model_to_json(model):
-    def eq_to_dict(eq):
+def model_to_json(model) -> dict[str, Any]:
+    def eq_to_dict(eq) -> dict[str, Any]:
         return {
             "id": eq.id,
             "name": eq.name,
@@ -32,7 +34,7 @@ def model_to_json(model):
             "children": [eq_to_dict(c) for c in eq.children],
         }
 
-    def cls_to_dict(cls):
+    def cls_to_dict(cls) -> dict[str, Any]:
         return {
             "name": cls.name,
             "parent": cls.parent,
@@ -50,7 +52,7 @@ def model_to_json(model):
     }
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(prog="b2mml")
     parser.add_argument("--verbose", action="store_true", help="Enable debug logging")
     parser.add_argument("--version", action="store_true", help="Show version and exit")
@@ -75,6 +77,10 @@ def main():
     stats_cmd = subparsers.add_parser("stats", help="Show model statistics")
     stats_cmd.add_argument("input", help="Input Ampla XML file")
     stats_cmd.add_argument("--format", choices=["text", "json"], default="text")
+
+    validate_cmd = subparsers.add_parser("validate", help="Validate Ampla XML model")
+    validate_cmd.add_argument("input")
+    validate_cmd.add_argument("--format", choices=["text", "json"], default="text")
 
     diff_cmd = subparsers.add_parser("diff", help="Diff two Ampla XML files")
     diff_cmd.add_argument("input_a", help="First Ampla XML file (baseline)")
@@ -158,3 +164,22 @@ def main():
         html = export_to_html(model)
         with open(args.output, "w", encoding="utf-8") as f:
             f.write(html)
+
+    elif args.command == "validate":
+        warnings = validate_model(model)
+
+        if args.format == "json":
+            print(
+                json.dumps(
+                    {"warnings": warnings, "valid": len(warnings) == 0}, indent=2
+                )
+            )
+        else:
+            if warnings:
+                print("Model validation FAILED")
+                for w in warnings:
+                    print(f" - {w}")
+            else:
+                print("Model validation OK")
+
+        sys.exit(1 if warnings else 0)
