@@ -27,6 +27,8 @@ This tool parses the XML and produces:
 - **CSV exports**
 - **HTML report**
 
+**The B2MML XML output follows the ISA‑95 B2MML v0400 schema, matching the structure of the original Ampla XSLT.**
+
 Additional capabilities:
 
 - **Validation warnings** for structural issues (unknown class IDs, malformed items, missing config)
@@ -238,6 +240,24 @@ Exit codes:
 - `0` → no differences  
 - `1` → differences found  
 
+### Validate an Ampla XML model
+
+Run structural validation on the parsed model:
+
+```
+b2mml validate input.xml
+```
+
+JSON output:
+
+```
+b2mml validate --format json input.xml
+```
+
+Exit codes:
+- `0` → model is valid (no warnings)
+- `1` → warnings detected (unknown classes, missing parents, circular inheritance, etc.)
+
 ---
 
 ## **API usage**
@@ -263,6 +283,7 @@ uvicorn app.api:app --reload
 | POST | `/stats` | Model statistics |
 | POST | `/diff/json` | JSON diff |
 | POST | `/diff/text` | Text diff |
+| POST | `/validate` | Validate model and return warnings |
 
 Examples:
 
