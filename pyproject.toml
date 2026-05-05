@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "amplab2mml"
 version = "0.1.0"
-description = "Ampla to B2MML transformer"
+description = "Ampla to B2MML transformer V0400"
 readme = "README.md"
 requires-python = ">=3.12"
 dynamic = ["dependencies"]
@@ -16,6 +16,8 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Utilities",
 ]
 
 [tool.setuptools.dynamic]
