@@ -20,6 +20,21 @@ classifiers = [
     "Topic :: Utilities",
 ]
 
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "lxml",
+    "pydantic",
+    "python-multipart",
+    "openpyxl"
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "httpx"
+]
+
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
