@@ -296,3 +296,15 @@ def test_cli_audit_inheritance_reports_inherited_property(tmp_path):
     assert result.returncode == 0
     assert "Crusher.SecondaryCrusher" in result.stdout
     assert "Power <- Crusher" in result.stdout
+
+
+def test_cli_audit_duplicates():
+    result = subprocess.run(
+        ["b2mml", "audit-duplicates", "tests/data/sample_ampla.xml"],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Duplicate Audit" in result.stdout
+    assert "Summary" in result.stdout

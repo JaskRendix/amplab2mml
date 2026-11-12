@@ -7,6 +7,7 @@ from typing import Any
 
 from app.builders.b2mml_builder import build_b2mml_xml
 from app.diff import diff_models
+from app.duplicate_audit import render_duplicate_audit
 from app.excel_export import export_to_excel
 from app.html_report import export_to_html
 from app.inheritance_audit import render_inheritance_audit
@@ -87,6 +88,12 @@ def main() -> None:
         "audit-inheritance", help="Audit class inheritance properties"
     )
     audit_cmd.add_argument("input", help="Input Ampla XML file")
+
+    audit_dup_cmd = subparsers.add_parser(
+        "audit-duplicates",
+        help="Audit duplicate equipment, classes, and properties",
+    )
+    audit_dup_cmd.add_argument("input")
 
     diff_cmd = subparsers.add_parser("diff", help="Diff two Ampla XML files")
     diff_cmd.add_argument("input_a", help="First Ampla XML file (baseline)")
@@ -192,3 +199,6 @@ def main() -> None:
 
     elif args.command == "audit-inheritance":
         print(render_inheritance_audit(model), end="")
+
+    elif args.command == "audit-duplicates":
+        print(render_duplicate_audit(model), end="")

@@ -16,7 +16,7 @@ Ampla Project XML files can contain equipment hierarchies, equipment classes, cl
 
 The B2MML XML builder targets the ISA-95 B2MML v0400 schema and follows the structure of the original Ampla XSLT.
 
-The project also includes validation warnings, inheritance auditing, configuration diffs, and statistics such as equipment and class counts, property totals, and hierarchy depth.
+The project also includes validation warnings, inheritance auditing, duplicate detection, configuration diffs, and statistics such as equipment and class counts, property totals, and hierarchy depth.
 
 ## How the transformation works
 
@@ -194,6 +194,21 @@ The audit report shows:
 - property origin classes
 - summary counts for each class
 
+Audit duplicate identifiers and properties:
+
+```text
+b2mml audit-duplicates input.xml
+```
+
+The duplicate audit reports:
+
+- duplicate equipment full names
+- duplicate equipment IDs
+- duplicate class names
+- duplicate class property definitions
+
+Issues are categorized as errors and warnings.
+
 ## API
 
 Start the FastAPI server:
@@ -206,6 +221,7 @@ uvicorn app.api:app --reload
 |---|---|---|
 | GET | `/health` | Health check |
 | GET | `/info` | API and pipeline version information |
+| POST | `/audit/duplicates` | Return duplicate audit information |
 | POST | `/audit/inheritance` | Return inheritance audit information |
 | POST | `/convert/json` | Return the JSON model |
 | POST | `/convert/xml` | Return B2MML XML |
@@ -225,6 +241,7 @@ curl -X POST -F "file=@input.xml" http://localhost:8000/convert/json
 curl -X POST -F "file=@input.xml" http://localhost:8000/stats
 curl -X POST -F "file_a=@baseline.xml" -F "file_b=@updated.xml" http://localhost:8000/diff/text
 curl -X POST -F "file=@input.xml" http://localhost:8000/audit/inheritance
+curl -X POST -F "file=@input.xml" http://localhost:8000/audit/duplicates
 ```
 
 Interactive API documentation is available at `http://localhost:8000/docs`.
@@ -267,7 +284,7 @@ This project reimplements the `Ampla_to_Equipment_B2MML.xslt` transformation in 
 
 It adds validation warnings, configurable level mappings, more export formats, command-line and REST interfaces, diff and statistics tools, and support for malformed input.
 
-The automated test suite defines the project’s expected behavior.
+The automated test suite verifies the project’s expected behavior.
 
 ## License
 

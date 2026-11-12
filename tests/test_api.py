@@ -560,3 +560,29 @@ def test_audit_inheritance_contains_expected_class_data():
     assert report["inherited_count"] == 1
 
     assert report["inherited_properties"] == [{"name": "Power", "origin": "Crusher"}]
+
+
+def test_audit_duplicates():
+    xml = open("tests/data/sample_ampla.xml").read()
+
+    response = client.post(
+        "/audit/duplicates",
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "errors" in data
+    assert "warnings" in data
+    assert "summary" in data
+
+
+def test_audit_duplicates_invalid_xml():
+    response = client.post(
+        "/audit/duplicates",
+        files={"file": ("bad.xml", "<not-xml>", "application/xml")},
+    )
+
+    assert response.status_code in (400, 422)

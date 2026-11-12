@@ -8,6 +8,7 @@ from app.builders.b2mml_builder import build_b2mml_xml
 from app.cli import model_to_json
 from app.csv_export import export_classes_csv, export_equipment_csv
 from app.diff import diff_models
+from app.duplicate_audit import audit_duplicates
 from app.excel_export import export_to_excel
 from app.html_report import export_to_html
 from app.inheritance_audit import build_inheritance_audit
@@ -255,3 +256,17 @@ async def audit_inheritance(
 ):
     model = await load_model(file, request, "/audit/inheritance")
     return build_inheritance_audit(model)
+
+
+@app.post(
+    "/audit/duplicates",
+    tags=["audit"],
+    summary="Audit duplicate identifiers and properties",
+    operation_id="audit_duplicates",
+)
+async def audit_duplicates_endpoint(
+    file: UploadFile,
+    request: Request,
+):
+    model = await load_model(file, request, "/audit/duplicates")
+    return audit_duplicates(model)
