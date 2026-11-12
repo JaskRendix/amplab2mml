@@ -1,73 +1,37 @@
-# **Ampla to B2MML Transformer**
+# Ampla to B2MML Transformer
 
-This project converts an **Ampla Project XML export** into an **ISA‑95 B2MML Equipment model**.  
-It replaces the original XSLT‑only approach with a modern Python implementation featuring:
+The Ampla to B2MML Transformer converts an Ampla Project XML export into an ISA-95 B2MML Equipment model.
 
-- a command‑line interface  
-- a FastAPI service  
-- multiple output formats  
-- a fully tested, deterministic multi‑pass transformation pipeline  
+It uses Python to provide a command-line tool, a FastAPI service, and several export formats. Its multi-pass pipeline supports equipment hierarchies, class inheritance, and property overrides.
 
----
+## What it does
 
-## **Purpose**
+Ampla Project XML files can contain equipment hierarchies, equipment classes, class inheritance, and class and instance properties. The transformer converts that data into:
 
-Ampla Project XML files contain:
+- B2MML Equipment XML
+- A JSON model
+- An Excel workbook with Equipment and Classes sheets
+- CSV files
+- An HTML report
 
-- equipment hierarchy  
-- equipment classes  
-- class inheritance  
-- class and instance properties  
+The B2MML XML builder targets the ISA-95 B2MML v0400 schema and follows the structure of the original Ampla XSLT.
 
-This tool parses the XML and produces:
+The project also includes validation warnings, configuration diffs, and statistics such as equipment and class counts, property totals, and hierarchy depth.
 
-- **B2MML Equipment XML**
-- **JSON model**
-- **Excel workbook (.xlsx)** with Equipment and Classes sheets
-- **CSV exports**
-- **HTML report**
+## How the transformation works
 
-**The B2MML XML output follows the ISA‑95 B2MML v0400 schema, matching the structure of the original Ampla XSLT.**
+The transformation pipeline:
 
-Additional capabilities:
+1. Builds a lookup table for class IDs.
+2. Extracts classes and computes their inheritance chains.
+3. Parses the equipment tree.
+4. Resolves class IDs and records warnings.
+5. Merges inherited class properties with equipment overrides.
+6. Sorts and normalizes the resulting model.
 
-- **Validation warnings** for structural issues (unknown class IDs, malformed items, missing config)
-- **Diff mode** to compare two Ampla configurations
-- **Statistics summary** (equipment counts, class counts, property totals, hierarchy depth)
+The transformer creates an internal model that output builders use for XML, JSON, Excel, CSV, and HTML.
 
-The transformer is deterministic, regression‑tested, and suitable for automation, CI, and configuration comparison.
-
----
-
-## **Architecture**
-
-The transformation pipeline is implemented in a multi‑pass class:
-
-```python
-from app.transformers.ampla import AmplaTransformer
-```
-
-The pipeline performs:
-
-1. **Class ID lookup construction**  
-2. **Class hierarchy extraction**  
-3. **Inheritance chain computation**  
-4. **Equipment tree parsing**  
-5. **Full‑name resolution**  
-6. **Property merging** (class inheritance + instance overrides)  
-7. **Sorting and normalization**
-
-This reproduces the behaviour of the original XSLT while adding validation, configurability, and structured warnings.
-
----
-
-## Data Model Overview
-
-
-The transformer produces a clean, normalized internal representation of the Ampla project.  
-This model is independent of any output format (XML, JSON, Excel) and is used by all builders.
-
-### UML Model
+### Data model
 
 ```mermaid
 classDiagram
@@ -107,7 +71,7 @@ classDiagram
     Equipment ..> EquipmentClass : resolves attributes from
 ```
 
-### Transformation Pipeline (Sequence)
+### Transformation sequence
 
 ```mermaid
 sequenceDiagram
@@ -116,34 +80,19 @@ sequenceDiagram
     participant CTX as Context (Shared State)
     participant Model as Internal Model
 
-    AT->>XML: Pass 1: Build ID Lookup Table
-    AT->>XML: Pass 2: Extract Classes & Compute Inheritance
-    AT->>XML: Pass 3: Recursive Equipment Tree Parsing
-    AT->>CTX: Resolve Class IDs & Log Warnings
-    AT->>Model: Pass 4: Merge Properties & Apply Overrides
-    Note right of Model: Final deterministic B2MML-ready model
+    AT->>XML: Pass 1: Build ID lookup table
+    AT->>XML: Pass 2: Extract classes and compute inheritance
+    AT->>XML: Pass 3: Parse equipment tree
+    AT->>CTX: Resolve class IDs and record warnings
+    AT->>Model: Pass 4: Merge properties and apply overrides
+    Note right of Model: B2MML-ready model
 ```
 
-### Design Principles
+The design aims for repeatable output from the same input, separates parsing from output generation, and collects warnings for structural issues such as unknown class IDs, malformed items, and missing configuration.
 
-- **Deterministic output** — same XML → same model every time  
-- **Multi-pass resolution** — ensures class inheritance and overrides are fully resolved  
-- **Separation of concerns** — parsing, transformation, and output builders are isolated  
-- **Extensible** — new output formats can be added without touching the transformer  
-- **Safe** — warnings collected instead of throwing on malformed XML  
-```
+## Configuration
 
----
-
-## **Configuration (mapping.toml)**
-
-Level mapping is now externalized in:
-
-```
-config/mapping.toml
-```
-
-Example:
+Level mappings are stored in `config/mapping.toml`:
 
 ```toml
 [level_map]
@@ -153,205 +102,159 @@ Example:
 "Citect.Ampla.General.Server.ApplicationsFolder" = "Other"
 ```
 
-If the file is missing or invalid, the transformer logs a warning and falls back to defaults.
+If the file is missing or invalid, the transformer logs a warning and uses its default mappings.
 
----
-
-## **Programmatic usage**
+## Use the transformer in Python
 
 ```python
 from lxml import etree
 from app.transformers.ampla import AmplaTransformer
 
-# Parse XML
 root = etree.parse("input.xml").getroot()
 
-# Create transformer (loads mapping.toml automatically)
 transformer = AmplaTransformer(config_path="config/mapping.toml")
-
-# Run transformation
 model = transformer.transform(root)
 
 print(model["equipment"])
 print(model["classes"])
-print(model["warnings"])   # non-fatal issues detected during parsing
+print(model["warnings"])
 ```
 
-The returned model is a dictionary:
+The returned dictionary contains `equipment`, `classes`, and `warnings`.
 
-```python
-{
-    "equipment": [...],
-    "classes": [...],
-    "warnings": [...]
-}
-```
+## Command-line interface
 
----
+Convert Ampla XML to B2MML XML:
 
-## **Command-line usage**
-
-### Convert Ampla XML to B2MML XML
-```
+```text
 b2mml convert input.xml output.xml
 ```
 
-### Convert to JSON
-```
-b2mml json input.xml output.json
-```
+Export JSON to a file or stdout:
 
-Write to stdout:
-```
+```text
+b2mml json input.xml output.json
 b2mml json input.xml
 ```
 
-### Export to Excel
-```
+Export an Excel workbook:
+
+```text
 b2mml excel input.xml output.xlsx
 ```
 
-### Show model statistics
-```
-b2mml stats input.xml
-```
+Show statistics:
 
-As JSON:
-```
+```text
+b2mml stats input.xml
 b2mml stats --format json input.xml
 ```
 
-### Export HTML report
-```
+Create an HTML report:
+
+```text
 b2mml html input.xml report.html
 ```
 
-### Diff two Ampla XML files
-```
-b2mml diff baseline.xml updated.xml
-```
+Compare two Ampla XML files:
 
-As JSON:
-```
+```text
+b2mml diff baseline.xml updated.xml
 b2mml diff --format json baseline.xml updated.xml
 ```
 
-Exit codes:
-- `0` → no differences  
-- `1` → differences found  
+Diff exit codes:
 
-### Validate an Ampla XML model
+- `0`: no differences
+- `1`: differences found
 
-Run structural validation on the parsed model:
+Validate an Ampla XML model:
 
-```
+```text
 b2mml validate input.xml
-```
-
-JSON output:
-
-```
 b2mml validate --format json input.xml
 ```
 
-Exit codes:
-- `0` → model is valid (no warnings)
-- `1` → warnings detected (unknown classes, missing parents, circular inheritance, etc.)
+Validation exit codes:
 
----
+- `0`: no warnings
+- `1`: warnings found, such as unknown classes, missing parents, or circular inheritance
 
-## **API usage**
+## API
 
 Start the FastAPI server:
 
-```
+```text
 uvicorn app.api:app --reload
 ```
 
-### Endpoints
-
 | Method | Path | Description |
-|--------|------|-------------|
+|---|---|---|
 | GET | `/health` | Health check |
-| GET | `/info` | API and pipeline version info |
-| POST | `/convert/json` | JSON model |
-| POST | `/convert/xml` | B2MML XML |
-| POST | `/convert/excel` | Excel workbook |
-| POST | `/convert/csv/equipment` | Equipment CSV |
-| POST | `/convert/csv/classes` | Classes CSV |
-| POST | `/convert/html` | HTML report |
-| POST | `/stats` | Model statistics |
-| POST | `/diff/json` | JSON diff |
-| POST | `/diff/text` | Text diff |
-| POST | `/validate` | Validate model and return warnings |
+| GET | `/info` | API and pipeline version information |
+| POST | `/convert/json` | Return the JSON model |
+| POST | `/convert/xml` | Return B2MML XML |
+| POST | `/convert/excel` | Return an Excel workbook |
+| POST | `/convert/csv/equipment` | Return equipment CSV |
+| POST | `/convert/csv/classes` | Return classes CSV |
+| POST | `/convert/html` | Return an HTML report |
+| POST | `/stats` | Return model statistics |
+| POST | `/diff/json` | Return a JSON diff |
+| POST | `/diff/text` | Return a text diff |
+| POST | `/validate` | Return validation warnings |
 
-Examples:
+Example requests:
 
-```
+```text
 curl -X POST -F "file=@input.xml" http://localhost:8000/convert/json
 curl -X POST -F "file=@input.xml" http://localhost:8000/stats
 curl -X POST -F "file_a=@baseline.xml" -F "file_b=@updated.xml" http://localhost:8000/diff/text
 ```
 
-Interactive docs:  
-`http://localhost:8000/docs`
+Interactive API documentation is available at `http://localhost:8000/docs`.
 
----
-
-## **Docker Compose (local development)**
+## Local development with Docker Compose
 
 Start the API:
 
-```
+```text
 make up
 ```
 
-Service available at:
+The service runs at `http://localhost:8000`.
 
-```
-http://localhost:8000
-```
+Stop the service:
 
-Stop:
-
-```
+```text
 make down
 ```
 
----
+## Project layout
 
-## **Project structure**
+- `app/parsers` — XML parsing
+- `app/transformers` — Ampla-to-model transformation
+- `app/builders` — B2MML XML generation
+- `app/validators.py` — model validation and warnings
+- `app/diff.py` — structural diffs
+- `app/stats.py` — statistics
+- `app/excel_export.py` — Excel export
+- `app/csv_export.py` — CSV export
+- `app/html_report.py` — HTML report generation
+- `app/cli.py` — command-line interface
+- `app/api.py` — FastAPI service
+- `app/schemas.py` — Pydantic response models
+- `tests/` — tests and regression fixtures
 
-- `app/parsers` — XML parsing  
-- `app/transformers` — Ampla → internal model  
-- `app/builders` — B2MML XML serialization  
-- `app/validators.py` — model validation + warnings  
-- `app/diff.py` — structural diff engine  
-- `app/stats.py` — statistics computation  
-- `app/excel_export.py` — Excel export  
-- `app/csv_export.py` — CSV export  
-- `app/html_report.py` — HTML report generator  
-- `app/cli.py` — CLI entrypoints  
-- `app/api.py` — FastAPI service  
-- `app/schemas.py` — Pydantic response models  
-- `tests/` — full test suite + regression fixtures  
+## Relation to the original XSLT
 
----
+This project reimplements the `Ampla_to_Equipment_B2MML.xslt` transformation in Python. It preserves the stylesheet’s core behavior, including equipment hierarchy generation, class inheritance, property merging and overrides, full-name generation, and ISA-95 B2MML output structure.
 
-## **License**
+It adds validation warnings, configurable level mappings, more export formats, command-line and REST interfaces, diff and statistics tools, and support for malformed input.
 
-This project is licensed under the BSD 3-Clause License.
+The automated test suite defines the project’s expected behavior.
 
-This project includes derivative work from
-`Ampla_to_Equipment_B2MML.xslt` by Oleg Tkachenko (2005),
-which is also licensed under the BSD 3-Clause License.
+## License
 
-See the [LICENSE](LICENSE) file for details.
+The project is licensed under the BSD 3-Clause License. It includes derivative work from `Ampla_to_Equipment_B2MML.xslt` by Oleg Tkachenko (2005), which is also licensed under the BSD 3-Clause License.
 
-## **Third-Party Software**
-
-This project includes code derived from
-`Ampla_to_Equipment_B2MML.xslt` by Oleg Tkachenko.
-
-See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-for attribution and third-party license information.
+See `LICENSE` and `THIRD_PARTY_NOTICES.md` for license and attribution details.
