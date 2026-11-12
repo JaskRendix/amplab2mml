@@ -16,7 +16,7 @@ Ampla Project XML files can contain equipment hierarchies, equipment classes, cl
 
 The B2MML XML builder targets the ISA-95 B2MML v0400 schema and follows the structure of the original Ampla XSLT.
 
-The project also includes validation warnings, configuration diffs, and statistics such as equipment and class counts, property totals, and hierarchy depth.
+The project also includes validation warnings, inheritance auditing, configuration diffs, and statistics such as equipment and class counts, property totals, and hierarchy depth.
 
 ## How the transformation works
 
@@ -108,7 +108,7 @@ If the file is missing or invalid, the transformer logs a warning and uses its d
 
 ```python
 from lxml import etree
-from app.transformers.ampla import AmplaTransformer
+from app.transformers.ampla_to_b2mml import AmplaTransformer
 
 root = etree.parse("input.xml").getroot()
 
@@ -180,6 +180,20 @@ Validation exit codes:
 - `0`: no warnings
 - `1`: warnings found, such as unknown classes, missing parents, or circular inheritance
 
+Audit class inheritance resolution:
+
+```text
+b2mml audit-inheritance input.xml
+```
+
+The audit report shows:
+
+- class inheritance chains
+- declared properties
+- inherited properties
+- property origin classes
+- summary counts for each class
+
 ## API
 
 Start the FastAPI server:
@@ -192,6 +206,7 @@ uvicorn app.api:app --reload
 |---|---|---|
 | GET | `/health` | Health check |
 | GET | `/info` | API and pipeline version information |
+| POST | `/audit/inheritance` | Return inheritance audit information |
 | POST | `/convert/json` | Return the JSON model |
 | POST | `/convert/xml` | Return B2MML XML |
 | POST | `/convert/excel` | Return an Excel workbook |
@@ -209,6 +224,7 @@ Example requests:
 curl -X POST -F "file=@input.xml" http://localhost:8000/convert/json
 curl -X POST -F "file=@input.xml" http://localhost:8000/stats
 curl -X POST -F "file_a=@baseline.xml" -F "file_b=@updated.xml" http://localhost:8000/diff/text
+curl -X POST -F "file=@input.xml" http://localhost:8000/audit/inheritance
 ```
 
 Interactive API documentation is available at `http://localhost:8000/docs`.
