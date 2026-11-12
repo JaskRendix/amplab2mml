@@ -485,3 +485,78 @@ def test_validate_with_warnings(tmp_path):
     assert "warnings" in data
     assert len(data["warnings"]) > 0
     assert data["valid"] is False
+
+
+def test_audit_inheritance():
+    xml = open("tests/data/sample_ampla.xml").read()
+
+    response = client.post(
+        "/audit/inheritance",
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert isinstance(data, list)
+
+    if data:
+        cls = data[0]
+
+        assert "class_name" in cls
+        assert "parent" in cls
+        assert "inheritance_chain" in cls
+        assert "declared_properties" in cls
+        assert "inherited_properties" in cls
+        assert "declared_count" in cls
+        assert "inherited_count" in cls
+
+
+def test_audit_inheritance_invalid_xml():
+    response = client.post(
+        "/audit/inheritance",
+        files={"file": ("bad.xml", "<not-xml>", "application/xml")},
+    )
+
+    assert response.status_code in (400, 422)
+
+
+def test_audit_inheritance_contains_expected_class_data():
+    xml = """
+    <Ampla>
+      <ClassDefinitions>
+        <ClassDefinition id="1" name="Root">
+
+          <ClassDefinition id="2" name="Crusher">
+            <PropertyDefinition name="Power" type="System.String">1000</PropertyDefinition>
+
+            <ClassDefinition id="3" name="SecondaryCrusher">
+              <PropertyDefinition name="OperatingMode" type="System.String">Auto</PropertyDefinition>
+            </ClassDefinition>
+
+          </ClassDefinition>
+
+        </ClassDefinition>
+      </ClassDefinitions>
+    </Ampla>
+    """
+
+    response = client.post(
+        "/audit/inheritance",
+        files={"file": ("sample.xml", xml, "application/xml")},
+    )
+
+    assert response.status_code == 200
+
+    report = next(
+        item
+        for item in response.json()
+        if item["class_name"] == "Crusher.SecondaryCrusher"
+    )
+
+    assert report["parent"] == "Crusher"
+    assert report["declared_count"] == 1
+    assert report["inherited_count"] == 1
+
+    assert report["inherited_properties"] == [{"name": "Power", "origin": "Crusher"}]

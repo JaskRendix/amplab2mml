@@ -10,6 +10,7 @@ from app.csv_export import export_classes_csv, export_equipment_csv
 from app.diff import diff_models
 from app.excel_export import export_to_excel
 from app.html_report import export_to_html
+from app.inheritance_audit import build_inheritance_audit
 from app.logging_setup import (
     log_invalid_xml,
     logger,
@@ -240,3 +241,17 @@ async def validate(file: UploadFile, request: Request) -> dict[str, Any]:
     model = await load_model(file, request, "/validate")
     warnings = validate_model(model)
     return {"warnings": warnings, "valid": len(warnings) == 0}
+
+
+@app.post(
+    "/audit/inheritance",
+    tags=["audit"],
+    summary="Audit class inheritance and property resolution",
+    operation_id="audit_inheritance",
+)
+async def audit_inheritance(
+    file: UploadFile,
+    request: Request,
+):
+    model = await load_model(file, request, "/audit/inheritance")
+    return build_inheritance_audit(model)

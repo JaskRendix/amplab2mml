@@ -9,6 +9,7 @@ from app.builders.b2mml_builder import build_b2mml_xml
 from app.diff import diff_models
 from app.excel_export import export_to_excel
 from app.html_report import export_to_html
+from app.inheritance_audit import render_inheritance_audit
 from app.pipeline import InvalidXML, run_pipeline_from_file
 from app.stats import compute_stats
 from app.validators import validate_model
@@ -81,6 +82,11 @@ def main() -> None:
     validate_cmd = subparsers.add_parser("validate", help="Validate Ampla XML model")
     validate_cmd.add_argument("input")
     validate_cmd.add_argument("--format", choices=["text", "json"], default="text")
+
+    audit_cmd = subparsers.add_parser(
+        "audit-inheritance", help="Audit class inheritance properties"
+    )
+    audit_cmd.add_argument("input", help="Input Ampla XML file")
 
     diff_cmd = subparsers.add_parser("diff", help="Diff two Ampla XML files")
     diff_cmd.add_argument("input_a", help="First Ampla XML file (baseline)")
@@ -183,3 +189,6 @@ def main() -> None:
                 print("Model validation OK")
 
         sys.exit(1 if warnings else 0)
+
+    elif args.command == "audit-inheritance":
+        print(render_inheritance_audit(model), end="")

@@ -233,3 +233,66 @@ def test_cli_validate_json():
     assert "warnings" in data
     assert "valid" in data
     assert data["valid"] is True
+
+
+def test_cli_audit_inheritance():
+    result = subprocess.run(
+        ["b2mml", "audit-inheritance", "tests/data/sample_ampla.xml"],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+
+    assert "Class:" in result.stdout
+    assert "Parent:" in result.stdout
+    assert "Inheritance Chain:" in result.stdout
+    assert "Declared Properties:" in result.stdout
+    assert "Inherited Properties:" in result.stdout
+    assert "Summary:" in result.stdout
+
+
+def test_cli_audit_inheritance_invalid_xml(tmp_path):
+    bad = tmp_path / "bad.xml"
+    bad.write_text("<not-xml>")
+
+    result = subprocess.run(
+        ["b2mml", "audit-inheritance", str(bad)],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+
+
+def test_cli_audit_inheritance_reports_inherited_property(tmp_path):
+    xml = tmp_path / "inheritance.xml"
+
+    xml.write_text(
+        """
+        <Ampla>
+          <ClassDefinitions>
+            <ClassDefinition id="1" name="Root">
+              <ClassDefinition id="2" name="Crusher">
+                <PropertyDefinition name="Power" type="System.String">1000</PropertyDefinition>
+
+                <ClassDefinition id="3" name="SecondaryCrusher">
+                  <PropertyDefinition name="Mode" type="System.String">Auto</PropertyDefinition>
+                </ClassDefinition>
+
+              </ClassDefinition>
+            </ClassDefinition>
+          </ClassDefinitions>
+        </Ampla>
+        """
+    )
+
+    result = subprocess.run(
+        ["b2mml", "audit-inheritance", str(xml)],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Crusher.SecondaryCrusher" in result.stdout
+    assert "Power <- Crusher" in result.stdout
