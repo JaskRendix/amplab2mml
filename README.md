@@ -340,7 +340,18 @@ make down
 
 ## **License**
 
-BSD 3‑Clause License.  
-Includes derivative work from the original  
-`Ampla_to_Equipment_B2MML.xslt` by Oleg Tkachenko (2005),  
-also under BSD 3‑Clause.
+This project is licensed under the BSD 3-Clause License.
+
+This project includes derivative work from
+`Ampla_to_Equipment_B2MML.xslt` by Oleg Tkachenko (2005),
+which is also licensed under the BSD 3-Clause License.
+
+See the [LICENSE](LICENSE) file for details.
+
+## **Third-Party Software**
+
+This project includes code derived from
+`Ampla_to_Equipment_B2MML.xslt` by Oleg Tkachenko.
+
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+for attribution and third-party license information.
