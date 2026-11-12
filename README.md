@@ -280,7 +280,11 @@ make down
 
 ## Relation to the original XSLT
 
-This project reimplements the `Ampla_to_Equipment_B2MML.xslt` transformation in Python. It preserves the stylesheet’s core behavior, including equipment hierarchy generation, class inheritance, property merging and overrides, full-name generation, and ISA-95 B2MML output structure.
+This project reimplements the `Ampla_to_Equipment_B2MML.xslt` transformation in Python.
+
+The original implementation is available in the [Project-To-B2MML](https://github.com/Ampla/Project-To-B2MML) repository.
+
+It preserves the stylesheet’s core behavior, including equipment hierarchy generation, class inheritance, property merging and overrides, full-name generation, and ISA-95 B2MML output structure.
 
 It adds validation warnings, configurable level mappings, more export formats, command-line and REST interfaces, diff and statistics tools, and support for malformed input.
 
